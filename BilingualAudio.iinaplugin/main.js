@@ -14,29 +14,38 @@ class BilingualAudioPlugin {
   }
 
   detectTracks() {
-    this.tracks = core.audio.tracks;
-    console.log('Bilingual Audio: Detected audio tracks:', this.tracks);
+    this.tracks = core.audio.tracks || [];
+    console.log('Bilingual Audio: Detected audio tracks:', JSON.stringify(this.tracks));
     
     if (this.tracks.length > 1) {
-      this.track1Id = this.tracks[0].id;
-      this.track2Id = this.tracks[1].id;
+      // Use the actual track IDs from mpv
+      this.track1Id = this.tracks[0].id !== undefined ? this.tracks[0].id : 1;
+      this.track2Id = this.tracks[1].id !== undefined ? this.tracks[1].id : 2;
+      console.log('Bilingual Audio: Track IDs:', this.track1Id, this.track2Id);
       this.showSidebar();
     } else {
-      console.log('Bilingual Audio: Only one audio track found, hiding sidebar');
+      console.log('Bilingual Audio: Only one audio track found (count:', this.tracks.length, '), hiding sidebar');
       sidebar.hide();
     }
   }
 
   showSidebar() {
+    console.log('Bilingual Audio: Loading sidebar.html...');
     sidebar.loadFile('sidebar.html');
-    sidebar.postMessage('tracks-loaded', {
-      tracks: this.tracks,
-      mode: this.defaultMode,
-      vol1: this.defaultVol1,
-      vol2: this.defaultVol2
-    });
-    sidebar.show();
-    console.log('Bilingual Audio: Sidebar shown with tracks:', this.tracks);
+    
+    // Small delay to ensure sidebar is loaded before posting message
+    setTimeout(() => {
+      const message = {
+        tracks: this.tracks,
+        mode: this.defaultMode,
+        vol1: this.defaultVol1,
+        vol2: this.defaultVol2
+      };
+      console.log('Bilingual Audio: Posting tracks-loaded message:', JSON.stringify(message));
+      sidebar.postMessage('tracks-loaded', message);
+      sidebar.show();
+      console.log('Bilingual Audio: Sidebar shown');
+    }, 100);
   }
 
   applyMix(mode, track1Id, track2Id, vol1, vol2) {

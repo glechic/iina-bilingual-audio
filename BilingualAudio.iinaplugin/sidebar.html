@@ -317,10 +317,14 @@
     let currentMode = 'single';
     
     iina.onMessage('tracks-loaded', (data) => {
+      console.log('Sidebar received tracks-loaded:', data);
       tracks = data.tracks || [];
       const defaultMode = data.mode || 'single';
       const defaultVol1 = (data.vol1 || 1.0) * 100;
       const defaultVol2 = (data.vol2 || 1.0) * 100;
+      
+      console.log('Tracks array:', tracks);
+      console.log('Track count:', tracks.length);
       
       populateTrackSelectors();
       updateMode(defaultMode);
@@ -347,24 +351,43 @@
       const select1 = document.getElementById('track1Select');
       const select2 = document.getElementById('track2Select');
       
+      console.log('Populating track selectors, tracks:', tracks);
+      
       select1.innerHTML = '';
       select2.innerHTML = '';
       
-      tracks.forEach((track) => {
+      if (!tracks || tracks.length === 0) {
+        console.error('No tracks available to populate');
+        select1.innerHTML = '<option value="">No tracks found</option>';
+        select2.innerHTML = '<option value="">No tracks found</option>';
+        return;
+      }
+      
+      tracks.forEach((track, index) => {
+        console.log('Processing track:', track, 'index:', index);
+        const trackId = track.id !== undefined ? track.id : (index + 1);
+        const trackTitle = track.title || track.lang || `Track ${trackId}`;
+        
         const option1 = document.createElement('option');
-        option1.value = track.id;
-        option1.textContent = `Track ${track.id}: ${track.title || track.lang || 'Unknown'}`;
+        option1.value = trackId;
+        option1.textContent = `Track ${trackId}: ${trackTitle}`;
         select1.appendChild(option1);
         
         const option2 = document.createElement('option');
-        option2.value = track.id;
-        option2.textContent = `Track ${track.id}: ${track.title || track.lang || 'Unknown'}`;
+        option2.value = trackId;
+        option2.textContent = `Track ${trackId}: ${trackTitle}`;
         select2.appendChild(option2);
       });
       
-      if (tracks.length > 1) {
-        select2.value = tracks[1].id;
+      // Set defaults
+      if (tracks.length >= 1) {
+        select1.value = tracks[0].id !== undefined ? tracks[0].id : 1;
       }
+      if (tracks.length > 1) {
+        select2.value = tracks[1].id !== undefined ? tracks[1].id : 2;
+      }
+      
+      console.log('Track selectors populated. Select1:', select1.value, 'Select2:', select2.value);
     }
     
     function updateMode(mode) {
