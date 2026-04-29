@@ -95,9 +95,21 @@ The `lavfi-complex` filter requires playback to reload. The plugin automatically
 
 ### Sidebar doesn't appear
 
-- Check that the video has multiple audio tracks
-- Verify the plugin is installed in the correct directory
-- Check IINA's console for error messages (View → Console)
+- **Check video has multiple audio tracks**: Open IINA's native audio track menu (right-click → Audio → Audio Track) to verify
+- **Verify plugin installation**: Ensure `BilingualAudio.iinaplugin` folder is in `~/Library/Application Support/com.colliderli.iina/plugins/`
+- **Check IINA's console**: Go to **View → Console** or press `Cmd+Shift+C` to see plugin logs
+- **Look for "Bilingual Audio" logs**: You should see messages like:
+  - `Bilingual Audio: File loaded, detecting tracks...`
+  - `Bilingual Audio: Detected audio tracks: [...]`
+  - `Bilingual Audio: Sidebar shown`
+- **Restart IINA**: After installing/updating the plugin, fully quit and restart IINA
+
+### Track selectors show "No tracks found"
+
+- The plugin may not be detecting tracks correctly
+- Check console for error messages
+- Try a different video file known to have multiple audio tracks
+- Verify the video file actually contains multiple audio streams (use `ffprobe` or MediaInfo)
 
 ### Audio sounds distorted in Stereo mode
 
