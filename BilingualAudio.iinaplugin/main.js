@@ -59,14 +59,30 @@ class BilingualAudioPlugin {
     
     // Small delay to ensure sidebar is loaded before posting message
     setTimeout(() => {
+      // Transform tracks to ensure they have the expected structure
+      const trackData = this.tracks.map((t, i) => ({
+        id: t.id !== undefined ? t.id : (i + 1),
+        title: t.title || t.name || '',
+        lang: t.lang || t.language || ''
+      }));
+      
+      console.log('Bilingual Audio: Transformed track data:', JSON.stringify(trackData));
+      
       const message = {
-        tracks: this.tracks,
+        tracks: trackData,
         mode: this.defaultMode,
         vol1: this.defaultVol1,
         vol2: this.defaultVol2
       };
       console.log('Bilingual Audio: Posting tracks-loaded message:', JSON.stringify(message));
-      sidebar.postMessage('tracks-loaded', message);
+      
+      try {
+        sidebar.postMessage('tracks-loaded', message);
+        console.log('Bilingual Audio: postMessage succeeded');
+      } catch (e) {
+        console.error('Bilingual Audio: postMessage failed:', e);
+      }
+      
       sidebar.show();
       console.log('Bilingual Audio: Sidebar shown');
     }, 100);

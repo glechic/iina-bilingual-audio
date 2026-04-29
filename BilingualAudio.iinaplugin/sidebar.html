@@ -316,15 +316,32 @@
     let tracks = [];
     let currentMode = 'single';
     
+    // Ensure iina object is available
+    if (typeof iina === 'undefined') {
+      console.error('iina object is not defined!');
+    } else {
+      console.log('iina object available:', typeof iina);
+    }
+    
     iina.onMessage('tracks-loaded', (data) => {
-      console.log('Sidebar received tracks-loaded:', data);
-      tracks = data.tracks || [];
+      console.log('=== Sidebar received tracks-loaded ===');
+      console.log('Full data:', JSON.stringify(data));
+      console.log('data.tracks:', data.tracks);
+      console.log('data.tracks type:', Array.isArray(data.tracks) ? 'array' : typeof data.tracks);
+      console.log('Track count:', data.tracks ? data.tracks.length : 0);
+      
+      tracks = Array.isArray(data.tracks) ? data.tracks : [];
       const defaultMode = data.mode || 'single';
       const defaultVol1 = (data.vol1 || 1.0) * 100;
       const defaultVol2 = (data.vol2 || 1.0) * 100;
       
-      console.log('Tracks array:', tracks);
-      console.log('Track count:', tracks.length);
+      console.log('Assigned tracks:', tracks);
+      console.log('First track:', tracks[0]);
+      console.log('Second track:', tracks[1]);
+      
+      if (tracks.length === 0) {
+        console.error('ERROR: No tracks received!');
+      }
       
       populateTrackSelectors();
       updateMode(defaultMode);
@@ -351,43 +368,63 @@
       const select1 = document.getElementById('track1Select');
       const select2 = document.getElementById('track2Select');
       
-      console.log('Populating track selectors, tracks:', tracks);
+      console.log('=== populateTrackSelectors called ===');
+      console.log('tracks array:', tracks);
+      console.log('tracks.length:', tracks.length);
       
       select1.innerHTML = '';
       select2.innerHTML = '';
       
       if (!tracks || tracks.length === 0) {
-        console.error('No tracks available to populate');
+        console.error('ERROR: No tracks available to populate');
         select1.innerHTML = '<option value="">No tracks found</option>';
         select2.innerHTML = '<option value="">No tracks found</option>';
         return;
       }
       
+      // Populate both selects with all tracks
       tracks.forEach((track, index) => {
-        console.log('Processing track:', track, 'index:', index);
-        const trackId = track.id !== undefined ? track.id : (index + 1);
+        console.log('Processing track', index, ':', track);
+        console.log('  - track.id:', track.id);
+        console.log('  - track.title:', track.title);
+        console.log('  - track.lang:', track.lang);
+        
+        const trackId = track.id;
         const trackTitle = track.title || track.lang || `Track ${trackId}`;
+        const displayText = `Track ${trackId}: ${trackTitle}`;
         
+        console.log('  - Creating option:', displayText);
+        
+        // Create option for select1
         const option1 = document.createElement('option');
-        option1.value = trackId;
-        option1.textContent = `Track ${trackId}: ${trackTitle}`;
+        option1.value = String(trackId);
+        option1.textContent = displayText;
         select1.appendChild(option1);
+        console.log('  - Added to select1');
         
+        // Create option for select2
         const option2 = document.createElement('option');
-        option2.value = trackId;
-        option2.textContent = `Track ${trackId}: ${trackTitle}`;
+        option2.value = String(trackId);
+        option2.textContent = displayText;
         select2.appendChild(option2);
+        console.log('  - Added to select2');
       });
       
-      // Set defaults
-      if (tracks.length >= 1) {
-        select1.value = tracks[0].id !== undefined ? tracks[0].id : 1;
+      // Set default selections
+      if (tracks.length >= 1 && tracks[0].id !== undefined) {
+        select1.value = String(tracks[0].id);
+        console.log('Set select1 value to:', select1.value);
       }
-      if (tracks.length > 1) {
-        select2.value = tracks[1].id !== undefined ? tracks[1].id : 2;
+      if (tracks.length > 1 && tracks[1].id !== undefined) {
+        select2.value = String(tracks[1].id);
+        console.log('Set select2 value to:', select2.value);
       }
       
-      console.log('Track selectors populated. Select1:', select1.value, 'Select2:', select2.value);
+      console.log('=== populateTrackSelectors complete ===');
+      console.log('select1.options.length:', select1.options.length);
+      console.log('select2.options.length:', select2.options.length);
+      console.log('select1.value:', select1.value);
+      console.log('select2.value:', select2.value);
     }
     
     function updateMode(mode) {
