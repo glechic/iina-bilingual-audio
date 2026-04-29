@@ -1,0 +1,19 @@
+{
+  "name": "Bilingual Audio Mixer",
+  "identifier": "com.bilingual-audio.iina-plugin",
+  "version": "1.0.0",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "entry": "main.js",
+  "description": "Mix bilingual audio tracks with left/right channel separation or simultaneous playback",
+  "sidebarTab": {
+    "name": "Audio Mixer"
+  },
+  "preferencesPage": "preferences.html",
+  "permissions": [
+    "show-osd"
+  ],
+  "allowedDomains": []
+}

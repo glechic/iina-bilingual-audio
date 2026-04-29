@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1e1e1e;
+      color: #ffffff;
+      padding: 15px;
+      font-size: 13px;
+    }
+    
+    h2 {
+      font-size: 16px;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+    
+    h3 {
+      font-size: 12px;
+      margin: 15px 0 8px 0;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .section {
+      margin-bottom: 20px;
+    }
+    
+    .track-list {
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .track {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+    
+    .track:last-child {
+      border-bottom: none;
+    }
+    
+    .track:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    
+    .track.selected {
+      background: #007aff;
+    }
+    
+    .track-number {
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    
+    .track-name {
+      color: #fff;
+    }
+    
+    .track-lang {
+      color: #999;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    
+    .track-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .track-selector > div {
+      flex: 1;
+    }
+    
+    .track-selector label {
+      display: block;
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    
+    .track-selector select {
+      width: 100%;
+      padding: 8px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 12px;
+    }
+    
+    .mode-selector {
+      margin: 15px 0;
+    }
+    
+    .mode-option {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      cursor: pointer;
+    }
+    
+    .mode-option input[type="radio"] {
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    
+    .mode-option label {
+      cursor: pointer;
+      flex: 1;
+    }
+    
+    .mode-option .mode-desc {
+      font-size: 10px;
+      color: #666;
+      margin-top: 2px;
+    }
+    
+    .volume-controls {
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+    
+    .volume-control {
+      margin-bottom: 12px;
+    }
+    
+    .volume-control:last-child {
+      margin-bottom: 0;
+    }
+    
+    .volume-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    
+    .volume-label span {
+      font-size: 12px;
+    }
+    
+    .volume-label .volume-value {
+      color: #007aff;
+      font-weight: 600;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #007aff;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #007aff;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    button.primary {
+      background: #007aff;
+      color: #fff;
+    }
+    
+    button.primary:hover {
+      background: #0051d5;
+    }
+    
+    button.secondary {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    
+    button.secondary:hover {
+      background: rgba(255,255,255,0.25);
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    .info {
+      background: rgba(255,200,0,0.1);
+      border: 1px solid rgba(255,200,0,0.3);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: #ffc800;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Audio Mixer</h2>
+  
+  <div class="section">
+    <h3>Track Order</h3>
+    <div class="track-selector">
+      <div>
+        <label for="track1Select">Primary Track</label>
+        <select id="track1Select"></select>
+      </div>
+      <div>
+        <label for="track2Select">Secondary Track</label>
+        <select id="track2Select"></select>
+      </div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h3>Mode</h3>
+    <div class="mode-selector">
+      <div class="mode-option">
+        <input type="radio" id="modeSingle" name="mode" value="single" checked>
+        <label for="modeSingle">
+          <div>Single Track</div>
+          <div class="mode-desc">Play only the primary track</div>
+        </label>
+      </div>
+      <div class="mode-option">
+        <input type="radio" id="modeStereo" name="mode" value="stereo">
+        <label for="modeStereo">
+          <div>Stereo (Left/Right)</div>
+          <div class="mode-desc">Primary to left speaker, secondary to right</div>
+        </label>
+      </div>
+      <div class="mode-option">
+        <input type="radio" id="modeMixed" name="mode" value="mixed">
+        <label for="modeMixed">
+          <div>Mixed (Both)</div>
+          <div class="mode-desc">Both tracks played simultaneously</div>
+        </label>
+      </div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h3 class="volume-title">Volume</h3>
+    <div class="volume-controls" id="volumeControls">
+      <div class="volume-control">
+        <div class="volume-label">
+          <span id="vol1Label">Track 1</span>
+          <span class="volume-value" id="vol1Value">100%</span>
+        </div>
+        <input type="range" id="vol1Slider" min="0" max="100" value="100">
+      </div>
+      <div class="volume-control">
+        <div class="volume-label">
+          <span id="vol2Label">Track 2</span>
+          <span class="volume-value" id="vol2Value">100%</span>
+        </div>
+        <input type="range" id="vol2Slider" min="0" max="100" value="100">
+      </div>
+    </div>
+  </div>
+  
+  <div class="actions">
+    <button class="primary" onclick="applyMix()">Apply</button>
+    <button class="secondary" onclick="resetMix()">Reset</button>
+  </div>
+  
+  <div class="info hidden" id="reloadNotice">
+    Playback will reload to apply the audio mix.
+  </div>
+  
+  <script>
+    let tracks = [];
+    let currentMode = 'single';
+    
+    iina.onMessage('tracks-loaded', (data) => {
+      tracks = data.tracks || [];
+      const defaultMode = data.mode || 'single';
+      const defaultVol1 = (data.vol1 || 1.0) * 100;
+      const defaultVol2 = (data.vol2 || 1.0) * 100;
+      
+      populateTrackSelectors();
+      updateMode(defaultMode);
+      document.getElementById('vol1Slider').value = defaultVol1;
+      document.getElementById('vol2Slider').value = defaultVol2;
+      updateVolumeLabels();
+    });
+    
+    iina.onMessage('mix-reset', (data) => {
+      updateMode('single');
+      document.getElementById('vol1Slider').value = 100;
+      document.getElementById('vol2Slider').value = 100;
+      updateVolumeLabels();
+      
+      if (tracks.length > 0) {
+        document.getElementById('track1Select').value = tracks[0].id;
+        if (tracks.length > 1) {
+          document.getElementById('track2Select').value = tracks[1].id;
+        }
+      }
+    });
+    
+    function populateTrackSelectors() {
+      const select1 = document.getElementById('track1Select');
+      const select2 = document.getElementById('track2Select');
+      
+      select1.innerHTML = '';
+      select2.innerHTML = '';
+      
+      tracks.forEach((track) => {
+        const option1 = document.createElement('option');
+        option1.value = track.id;
+        option1.textContent = `Track ${track.id}: ${track.title || track.lang || 'Unknown'}`;
+        select1.appendChild(option1);
+        
+        const option2 = document.createElement('option');
+        option2.value = track.id;
+        option2.textContent = `Track ${track.id}: ${track.title || track.lang || 'Unknown'}`;
+        select2.appendChild(option2);
+      });
+      
+      if (tracks.length > 1) {
+        select2.value = tracks[1].id;
+      }
+    }
+    
+    function updateMode(mode) {
+      currentMode = mode;
+      document.querySelector(`input[value="${mode}"]`).checked = true;
+      updateVolumeVisibility();
+      updateVolumeLabels();
+    }
+    
+    function updateVolumeVisibility() {
+      const volumeControls = document.getElementById('volumeControls');
+      const isSingle = currentMode === 'single';
+      
+      if (isSingle) {
+        volumeControls.classList.add('hidden');
+      } else {
+        volumeControls.classList.remove('hidden');
+      }
+    }
+    
+    function updateVolumeLabels() {
+      const vol1Label = document.getElementById('vol1Label');
+      const vol2Label = document.getElementById('vol2Label');
+      
+      if (currentMode === 'stereo') {
+        vol1Label.textContent = 'Left Channel (Track 1)';
+        vol2Label.textContent = 'Right Channel (Track 2)';
+      } else if (currentMode === 'mixed') {
+        vol1Label.textContent = 'Track 1 Volume';
+        vol2Label.textContent = 'Track 2 Volume';
+      }
+    }
+    
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        currentMode = e.target.value;
+        updateVolumeVisibility();
+        updateVolumeLabels();
+      });
+    });
+    
+    document.getElementById('vol1Slider').addEventListener('input', (e) => {
+      document.getElementById('vol1Value').textContent = e.target.value + '%';
+    });
+    
+    document.getElementById('vol2Slider').addEventListener('input', (e) => {
+      document.getElementById('vol2Value').textContent = e.target.value + '%';
+    });
+    
+    function applyMix() {
+      const mode = currentMode;
+      const track1Id = parseInt(document.getElementById('track1Select').value);
+      const track2Id = parseInt(document.getElementById('track2Select').value);
+      const vol1 = parseInt(document.getElementById('vol1Slider').value) / 100;
+      const vol2 = parseInt(document.getElementById('vol2Slider').value) / 100;
+      
+      if (track1Id === track2Id && mode !== 'single') {
+        alert('Please select different tracks for stereo/mixed mode.');
+        return;
+      }
+      
+      iina.postMessage('apply-mix', {
+        mode: mode,
+        track1Id: track1Id,
+        track2Id: track2Id,
+        vol1: vol1,
+        vol2: vol2
+      });
+      
+      if (mode !== 'single') {
+        document.getElementById('reloadNotice').classList.remove('hidden');
+        setTimeout(() => {
+          document.getElementById('reloadNotice').classList.add('hidden');
+        }, 3000);
+      }
+    }
+    
+    function resetMix() {
+      iina.postMessage('reset-mix');
+    }
+    
+    updateVolumeVisibility();
+    updateVolumeLabels();
+  </script>
+</body>
+</html>

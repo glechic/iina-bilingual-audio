@@ -1,0 +1,10 @@
+.DS_Store
+*.iinaplgz
+node_modules/
+dist/
+*.log
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
