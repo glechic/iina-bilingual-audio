@@ -14,17 +14,41 @@ class BilingualAudioPlugin {
   }
 
   detectTracks() {
-    this.tracks = core.audio.tracks || [];
-    console.log('Bilingual Audio: Detected audio tracks:', JSON.stringify(this.tracks));
-    
-    if (this.tracks.length > 1) {
-      // Use the actual track IDs from mpv
-      this.track1Id = this.tracks[0].id !== undefined ? this.tracks[0].id : 1;
-      this.track2Id = this.tracks[1].id !== undefined ? this.tracks[1].id : 2;
-      console.log('Bilingual Audio: Track IDs:', this.track1Id, this.track2Id);
-      this.showSidebar();
-    } else {
-      console.log('Bilingual Audio: Only one audio track found (count:', this.tracks.length, '), hiding sidebar');
+    try {
+      // Get audio tracks - try multiple approaches
+      let audioTracks = null;
+      
+      // Approach 1: Direct property access
+      if (core.audio && core.audio.tracks) {
+        audioTracks = core.audio.tracks;
+        console.log('Bilingual Audio: Got tracks via core.audio.tracks');
+      }
+      
+      // Approach 2: Try getting via mpv property
+      if (!audioTracks || audioTracks.length === 0) {
+        const trackList = mpv.getProperty('track-list');
+        if (trackList && Array.isArray(trackList)) {
+          audioTracks = trackList.filter(t => t.type === 'audio');
+          console.log('Bilingual Audio: Got tracks via mpv.getProperty, audio count:', audioTracks.length);
+        }
+      }
+      
+      this.tracks = audioTracks || [];
+      console.log('Bilingual Audio: Final tracks array:', JSON.stringify(this.tracks, null, 2));
+      
+      if (this.tracks.length > 1) {
+        // Use the actual track IDs from mpv
+        this.track1Id = this.tracks[0].id !== undefined ? this.tracks[0].id : 1;
+        this.track2Id = this.tracks[1].id !== undefined ? this.tracks[1].id : 2;
+        console.log('Bilingual Audio: Track IDs:', this.track1Id, this.track2Id);
+        this.showSidebar();
+      } else {
+        console.log('Bilingual Audio: Only', this.tracks.length, 'audio track(s) found, hiding sidebar');
+        sidebar.hide();
+      }
+    } catch (e) {
+      console.error('Bilingual Audio: Error detecting tracks:', e);
+      this.tracks = [];
       sidebar.hide();
     }
   }
