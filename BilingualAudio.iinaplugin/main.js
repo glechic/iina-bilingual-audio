@@ -15,80 +15,116 @@ class BilingualAudioPlugin {
 
   detectTracks() {
     try {
-      // Get audio tracks - try multiple approaches
       let audioTracks = null;
+      let source = '';
       
-      // Approach 1: Direct property access
+      // Try core.audio.tracks first
       if (core.audio && core.audio.tracks) {
         audioTracks = core.audio.tracks;
-        console.log('Bilingual Audio: Got tracks via core.audio.tracks');
+        source = 'core.audio.tracks';
       }
+      
+      // Fallback to mpv.track-list
+      if (!audioTracks || audioTracks.length === 0) {
+        const trackList = mpv.getProperty('track-list');
+        if (trackList && Array.isArray(trackList)) {
+          audioTracks = trackList.filter(t => t.type === 'audio');
+          source = 'mpv.track-list';
+        }
+      }
+      
+      this.tracks = audioTracks || [];
+      
+      // Show OSD with track count
+      const count = this.tracks.length;
+      core.osd(`Audio Tracks: ${count}\nSource: ${source}`);
+      
+      console.log('Bilingual Audio: Got', count, 'tracks via', source);
+      console.log('Bilingual Audio: Tracks:', JSON.stringify(this.tracks));
+      
+      if (count > 1) {
+        this.track1Id = this.tracks[0].id !== undefined ? this.tracks[0].id : 1;
+        this.track2Id = this.tracks[1].id !== undefined ? this.tracks[1].id : 2;
+        console.log('Bilingual Audio: Track IDs:', this.track1Id, this.track2Id);
+        this.showSidebar();
+      } else {
+        console.log('Bilingual Audio: Only', count, 'track(s), hiding sidebar');
+        sidebar.hide();
+      }
+    } catch (e) {
+      console.error('Bilingual Audio: Error:', e);
+      core.osd('Audio Plugin Error\nCheck console');
+      this.tracks = [];
+      sidebar.hide();
+    }
+  }
       
       // Approach 2: Try getting via mpv property
       if (!audioTracks || audioTracks.length === 0) {
         const trackList = mpv.getProperty('track-list');
         if (trackList && Array.isArray(trackList)) {
           audioTracks = trackList.filter(t => t.type === 'audio');
-          console.log('Bilingual Audio: Got tracks via mpv.getProperty, audio count:', audioTracks.length);
+          source = 'mpv.track-list';
         }
       }
       
       this.tracks = audioTracks || [];
-      console.log('Bilingual Audio: Final tracks array:', JSON.stringify(this.tracks, null, 2));
       
-      if (this.tracks.length > 1) {
-        // Use the actual track IDs from mpv
+      // Show OSD with track info
+      const count = this.tracks.length;
+      core.osd(`Audio Tracks: ${count}\nSource: ${source}`);
+      
+      console.log('Bilingual Audio: Got', count, 'tracks via', source);
+      console.log('Bilingual Audio: Tracks:', JSON.stringify(this.tracks));
+      
+      if (count > 1) {
         this.track1Id = this.tracks[0].id !== undefined ? this.tracks[0].id : 1;
         this.track2Id = this.tracks[1].id !== undefined ? this.tracks[1].id : 2;
         console.log('Bilingual Audio: Track IDs:', this.track1Id, this.track2Id);
         this.showSidebar();
       } else {
-        console.log('Bilingual Audio: Only', this.tracks.length, 'audio track(s) found, hiding sidebar');
+        console.log('Bilingual Audio: Only', count, 'track(s), hiding sidebar');
         sidebar.hide();
       }
     } catch (e) {
-      console.error('Bilingual Audio: Error detecting tracks:', e);
+      console.error('Bilingual Audio: Error:', e);
+      core.osd('Audio Plugin Error\nCheck console');
       this.tracks = [];
       sidebar.hide();
     }
   }
 
   showSidebar() {
-    console.log('Bilingual Audio: Loading sidebar.html...');
     sidebar.loadFile('sidebar.html');
     
-    // Small delay to ensure sidebar is loaded before posting message
+    // Transform tracks to ensure they have the expected structure
+    const trackData = this.tracks.map((t, i) => ({
+      id: t.id !== undefined ? t.id : (i + 1),
+      title: t.title || t.name || '',
+      lang: t.lang || t.language || ''
+    }));
+    
+    const message = {
+      tracks: trackData,
+      mode: this.defaultMode,
+      vol1: this.defaultVol1,
+      vol2: this.defaultVol2
+    };
+    
+    // Show OSD with track count
+    core.osd(`Sending ${trackData.length} tracks to sidebar`);
+    
+    // Wait for sidebar to load
     setTimeout(() => {
-      // Transform tracks to ensure they have the expected structure
-      const trackData = this.tracks.map((t, i) => ({
-        id: t.id !== undefined ? t.id : (i + 1),
-        title: t.title || t.name || '',
-        lang: t.lang || t.language || ''
-      }));
-      
-      console.log('Bilingual Audio: Transformed track data:', JSON.stringify(trackData));
-      
-      const message = {
-        tracks: trackData,
-        mode: this.defaultMode,
-        vol1: this.defaultVol1,
-        vol2: this.defaultVol2
-      };
-      console.log('Bilingual Audio: Posting tracks-loaded message:', JSON.stringify(message));
-      
-      try {
-        sidebar.postMessage('tracks-loaded', message);
-        console.log('Bilingual Audio: postMessage succeeded');
-      } catch (e) {
-        console.error('Bilingual Audio: postMessage failed:', e);
-      }
-      
+      sidebar.postMessage('tracks-loaded', message);
       sidebar.show();
-      console.log('Bilingual Audio: Sidebar shown');
-    }, 100);
+    }, 200);
   }
 
   applyMix(mode, track1Id, track2Id, vol1, vol2) {
+    // Show OSD that we received the request
+    core.osd(`Applying: ${mode}\nT1: ${track1Id}, T2: ${track2Id}\nV1: ${Math.round(vol1*100)}%, V2: ${Math.round(vol2*100)}%`);
+    
     this.mode = mode;
     this.track1Id = track1Id;
     this.track2Id = track2Id;
@@ -101,25 +137,26 @@ class BilingualAudioPlugin {
 
     if (mode === 'stereo') {
       filter = this.buildStereoFilter(track1Id, track2Id, vol1, vol2);
-      this.showOSD('Stereo Mode', `Track ${track1Id} → Left`, `Track ${track2Id} → Right`);
     } else if (mode === 'mixed') {
       filter = this.buildMixedFilter(track1Id, track2Id, vol1, vol2);
-      this.showOSD('Mixed Mode', `Track ${track1Id}: ${Math.round(vol1 * 100)}%`, `Track ${track2Id}: ${Math.round(vol2 * 100)}%`);
     } else {
-      filter = '';
+      // Single track mode
       core.audio.id = track1Id;
-      this.showOSD('Single Track', `Playing Track ${track1Id}`);
+      core.osd(`Single Track Mode\nPlaying Track ${track1Id}`);
     }
 
     if (filter) {
-      mpv.setProperty('lavfi-complex', filter);
-      console.log('Bilingual Audio: Applied lavfi-complex filter:', filter);
+      // Show the filter being applied
+      core.osd(`Filter:\n${filter.substring(0, 50)}...`);
+      const result = mpv.setProperty('lavfi-complex', filter);
+      core.osd(`Filter applied\nReloading playback...`);
     } else {
       mpv.setProperty('lavfi-complex', '');
     }
 
     if (pos !== undefined && pos !== null) {
       mpv.command('seek', pos, 'absolute');
+      core.osd(`Position restored: ${Math.round(pos)}s`);
     }
   }
 
@@ -161,8 +198,35 @@ class BilingualAudioPlugin {
 const plugin = new BilingualAudioPlugin();
 
 event.on('mpv.file-loaded', () => {
-  console.log('Bilingual Audio: File loaded, detecting tracks...');
-  plugin.detectTracks();
+  core.osd('File loaded, detecting tracks...');
+  setTimeout(() => plugin.detectTracks(), 500);
+});
+
+// Also listen for track list changes
+event.on('mpv.track-list-change', () => {
+  core.osd('Track list changed, refreshing...');
+  setTimeout(() => plugin.detectTracks(), 300);
+});
+
+// Test if sidebar message handler works
+sidebar.onMessage('test-message', (data) => {
+  core.osd('TEST MESSAGE RECEIVED\nData: ' + JSON.stringify(data));
+});
+
+sidebar.onMessage('apply-mix', (data) => {
+  core.osd('RECEIVED apply-mix');
+  plugin.applyMix(data.mode, data.track1Id, data.track2Id, data.vol1, data.vol2);
+});
+
+sidebar.onMessage('reset-mix', () => {
+  plugin.resetMix();
+  sidebar.postMessage('mix-reset', {
+    mode: plugin.mode,
+    track1Id: plugin.track1Id,
+    track2Id: plugin.track2Id,
+    vol1: plugin.vol1,
+    vol2: plugin.vol2
+  });
 });
 
 sidebar.onMessage('apply-mix', (data) => {

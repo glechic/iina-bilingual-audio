@@ -304,51 +304,64 @@
   </div>
   
   <div class="actions">
-    <button class="primary" onclick="applyMix()">Apply</button>
-    <button class="secondary" onclick="resetMix()">Reset</button>
+    <button class="primary" id="applyBtn">Apply</button>
+    <button class="secondary" id="resetBtn">Reset</button>
+    <button class="secondary" id="testBtn">Test</button>
   </div>
   
   <div class="info hidden" id="reloadNotice">
     Playback will reload to apply the audio mix.
   </div>
   
+  <div class="debug-box" id="debugBox" style="background:#d32f2f;color:#fff;padding:12px;margin:10px 0;border-radius:6px;font-size:12px;font-family:monospace;">
+    <div style="font-weight:bold;margin-bottom:8px;">DEBUG INFO</div>
+    <div id="debugContent">Loading...</div>
+  </div>
+
   <script>
     let tracks = [];
     let currentMode = 'single';
     
-    // Ensure iina object is available
-    if (typeof iina === 'undefined') {
-      console.error('iina object is not defined!');
-    } else {
-      console.log('iina object available:', typeof iina);
-    }
-    
-    iina.onMessage('tracks-loaded', (data) => {
-      console.log('=== Sidebar received tracks-loaded ===');
-      console.log('Full data:', JSON.stringify(data));
-      console.log('data.tracks:', data.tracks);
-      console.log('data.tracks type:', Array.isArray(data.tracks) ? 'array' : typeof data.tracks);
-      console.log('Track count:', data.tracks ? data.tracks.length : 0);
+    function updateDebugInfo() {
+      const debugDiv = document.getElementById('debugContent');
+      if (!debugDiv) return;
       
-      tracks = Array.isArray(data.tracks) ? data.tracks : [];
-      const defaultMode = data.mode || 'single';
-      const defaultVol1 = (data.vol1 || 1.0) * 100;
-      const defaultVol2 = (data.vol2 || 1.0) * 100;
+      let html = `
+        <div>Tracks: ${tracks.length}</div>
+        <div>Mode: ${currentMode}</div>
+        <div>Vol1: ${document.getElementById('vol1Slider')?.value || 0}%, Vol2: ${document.getElementById('vol2Slider')?.value || 0}%</div>
+      `;
       
-      console.log('Assigned tracks:', tracks);
-      console.log('First track:', tracks[0]);
-      console.log('Second track:', tracks[1]);
-      
-      if (tracks.length === 0) {
-        console.error('ERROR: No tracks received!');
+      if (tracks.length > 0) {
+        html += `<div style="margin-top:8px;">T1: id=${tracks[0].id} "${tracks[0].title}"</div>`;
+        if (tracks[1]) {
+          html += `<div>T2: id=${tracks[1].id} "${tracks[1].title}"</div>`;
+        }
       }
       
-      populateTrackSelectors();
-      updateMode(defaultMode);
-      document.getElementById('vol1Slider').value = defaultVol1;
-      document.getElementById('vol2Slider').value = defaultVol2;
-      updateVolumeLabels();
+      debugDiv.innerHTML = html;
+    }
+      }
+      updateDebugInfo();
     });
+    
+    function updateDebugInfo() {
+      if (!debugDiv) return;
+      
+      let html = `
+        <strong>DEBUG:</strong><br>
+        Tracks: ${tracks.length}<br>
+        Current Mode: ${currentMode}<br>
+        Vol1: ${document.getElementById('vol1Slider').value}%, Vol2: ${document.getElementById('vol2Slider').value}%
+      `;
+      
+      if (tracks.length > 0) {
+        const t1 = tracks[0], t2 = tracks[1];
+        html += `<br>T1: id=${t1.id}, title="${t1.title}"<br>T2: id=${t2?.id}, title="${t2?.title}"`;
+      }
+      
+      debugDiv.innerHTML = html;
+    }
     
     iina.onMessage('mix-reset', (data) => {
       updateMode('single');
@@ -368,63 +381,41 @@
       const select1 = document.getElementById('track1Select');
       const select2 = document.getElementById('track2Select');
       
-      console.log('=== populateTrackSelectors called ===');
-      console.log('tracks array:', tracks);
-      console.log('tracks.length:', tracks.length);
-      
       select1.innerHTML = '';
       select2.innerHTML = '';
       
       if (!tracks || tracks.length === 0) {
-        console.error('ERROR: No tracks available to populate');
-        select1.innerHTML = '<option value="">No tracks found</option>';
-        select2.innerHTML = '<option value="">No tracks found</option>';
+        select1.innerHTML = '<option value="">No tracks</option>';
+        select2.innerHTML = '<option value="">No tracks</option>';
         return;
       }
       
       // Populate both selects with all tracks
-      tracks.forEach((track, index) => {
-        console.log('Processing track', index, ':', track);
-        console.log('  - track.id:', track.id);
-        console.log('  - track.title:', track.title);
-        console.log('  - track.lang:', track.lang);
-        
+      tracks.forEach((track) => {
         const trackId = track.id;
         const trackTitle = track.title || track.lang || `Track ${trackId}`;
         const displayText = `Track ${trackId}: ${trackTitle}`;
         
-        console.log('  - Creating option:', displayText);
-        
         // Create option for select1
         const option1 = document.createElement('option');
-        option1.value = String(trackId);
+        option1.value = trackId;
         option1.textContent = displayText;
         select1.appendChild(option1);
-        console.log('  - Added to select1');
         
         // Create option for select2
         const option2 = document.createElement('option');
-        option2.value = String(trackId);
+        option2.value = trackId;
         option2.textContent = displayText;
         select2.appendChild(option2);
-        console.log('  - Added to select2');
       });
       
       // Set default selections
-      if (tracks.length >= 1 && tracks[0].id !== undefined) {
-        select1.value = String(tracks[0].id);
-        console.log('Set select1 value to:', select1.value);
+      if (tracks.length >= 1) {
+        select1.value = tracks[0].id;
       }
-      if (tracks.length > 1 && tracks[1].id !== undefined) {
-        select2.value = String(tracks[1].id);
-        console.log('Set select2 value to:', select2.value);
+      if (tracks.length > 1) {
+        select2.value = tracks[1].id;
       }
-      
-      console.log('=== populateTrackSelectors complete ===');
-      console.log('select1.options.length:', select1.options.length);
-      console.log('select2.options.length:', select2.options.length);
-      console.log('select1.value:', select1.value);
-      console.log('select2.value:', select2.value);
     }
     
     function updateMode(mode) {
@@ -458,6 +449,86 @@
       }
     }
     
+    function applyMix() {
+      const mode = currentMode;
+      const track1Id = parseInt(document.getElementById('track1Select').value);
+      const track2Id = parseInt(document.getElementById('track2Select').value);
+      const vol1 = parseInt(document.getElementById('vol1Slider').value) / 100;
+      const vol2 = parseInt(document.getElementById('vol2Slider').value) / 100;
+      
+      if (track1Id === track2Id && mode !== 'single') {
+        alert('Please select different tracks for stereo/mixed mode.');
+        return;
+      }
+      
+      // Show in debug
+      const debugDiv = document.getElementById('debugContent');
+      if (debugDiv) {
+        debugDiv.innerHTML += `<div style="margin-top:10px;border-top:1px solid #fff;padding-top:8px;"><strong>APPLY CLICKED</strong></div>`;
+        debugDiv.innerHTML += `<div>Mode: ${mode}</div>`;
+        debugDiv.innerHTML += `<div>T1: ${track1Id}, T2: ${track2Id}</div>`;
+        debugDiv.innerHTML += `<div>V1: ${vol1}, V2: ${vol2}</div>`;
+        
+        // Try to post message
+        if (typeof iina !== 'undefined' && iina.postMessage) {
+          debugDiv.innerHTML += `<div>Calling iina.postMessage...</div>`;
+          try {
+            iina.postMessage('apply-mix', {
+              mode: mode,
+              track1Id: track1Id,
+              track2Id: track2Id,
+              vol1: vol1,
+              vol2: vol2
+            });
+            debugDiv.innerHTML += `<div style="color:#4caf50;"><strong>✓ Message sent successfully</strong></div>`;
+          } catch (e) {
+            debugDiv.innerHTML += `<div style="color:#ffeb3b;"><strong>ERROR: ${e.message}</strong></div>`;
+          }
+        } else {
+          debugDiv.innerHTML += `<div style="color:#ffeb3b;"><strong>ERROR: iina.postMessage not available</strong></div>`;
+          return;
+        }
+      }
+      
+      updateDebugInfo();
+      
+      if (mode !== 'single') {
+        document.getElementById('reloadNotice').classList.remove('hidden');
+        setTimeout(() => {
+          document.getElementById('reloadNotice').classList.add('hidden');
+        }, 3000);
+      }
+    }
+    
+    function resetMix() {
+      if (typeof iina !== 'undefined' && iina.postMessage) {
+        iina.postMessage('reset-mix');
+      }
+    }
+    
+    function testMessage() {
+      const debugDiv = document.getElementById('debugContent');
+      if (debugDiv) {
+        debugDiv.innerHTML += `<div style="margin-top:10px;border-top:1px solid #fff;padding-top:8px;"><strong style="color:#4fc3f7;">TEST BUTTON CLICKED</strong></div>`;
+      }
+      if (typeof iina !== 'undefined' && iina.postMessage) {
+        try {
+          iina.postMessage('test-message', { test: true });
+          if (debugDiv) {
+            debugDiv.innerHTML += `<div style="color:#4fc3f7;">Test message sent</div>`;
+          }
+        } catch (e) {
+          if (debugDiv) {
+            debugDiv.innerHTML += `<div style="color:#ffeb3b;">Test ERROR: ${e.message}</div>`;
+          }
+        }
+      } else {
+        if (debugDiv) {
+          debugDiv.innerHTML += `<div style="color:#ffeb3b;"><strong>ERROR: No iina.postMessage</strong></div>`;
+        }
+      }
+    }
+    
     document.querySelectorAll('input[name="mode"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
         currentMode = e.target.value;
@@ -474,37 +545,10 @@
       document.getElementById('vol2Value').textContent = e.target.value + '%';
     });
     
-    function applyMix() {
-      const mode = currentMode;
-      const track1Id = parseInt(document.getElementById('track1Select').value);
-      const track2Id = parseInt(document.getElementById('track2Select').value);
-      const vol1 = parseInt(document.getElementById('vol1Slider').value) / 100;
-      const vol2 = parseInt(document.getElementById('vol2Slider').value) / 100;
-      
-      if (track1Id === track2Id && mode !== 'single') {
-        alert('Please select different tracks for stereo/mixed mode.');
-        return;
-      }
-      
-      iina.postMessage('apply-mix', {
-        mode: mode,
-        track1Id: track1Id,
-        track2Id: track2Id,
-        vol1: vol1,
-        vol2: vol2
-      });
-      
-      if (mode !== 'single') {
-        document.getElementById('reloadNotice').classList.remove('hidden');
-        setTimeout(() => {
-          document.getElementById('reloadNotice').classList.add('hidden');
-        }, 3000);
-      }
-    }
-    
-    function resetMix() {
-      iina.postMessage('reset-mix');
-    }
+    // Add button click handlers
+    document.getElementById('applyBtn').addEventListener('click', applyMix);
+    document.getElementById('resetBtn').addEventListener('click', resetMix);
+    document.getElementById('testBtn').addEventListener('click', testMessage);
     
     updateVolumeVisibility();
     updateVolumeLabels();
