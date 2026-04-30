@@ -1,13 +1,14 @@
-const { core, mpv, global } = iina;
+const { core, mpv, iina } = this;
 
-global.onMessage('test-message', () => {
-  global.postMessage('mix-result', {
+iina.onMessage('test-message', () => {
+  iina.postMessage('mix-result', {
     success: true,
     message: 'Test received! global.js working.'
   });
 });
 
-global.onMessage('apply-mix', (data) => {
+iina.onMessage('apply-mix', (data) => {
+  iina.console.log('Received apply-mix: ' + JSON.stringify(data));
   let filter = '';
   
   if (data.mode === 'stereo') {
@@ -22,14 +23,15 @@ global.onMessage('apply-mix', (data) => {
   
   if (filter) {
     mpv.setProperty('lavfi-complex', filter);
-    global.postMessage('mix-result', {
+    iina.console.log('Filter set: ' + filter);
+    iina.postMessage('mix-result', {
       success: true,
       message: 'Filter applied: ' + data.mode
     });
   } else {
     mpv.setProperty('lavfi-complex', '');
     core.audio.id = data.track1Id;
-    global.postMessage('mix-result', { success: true, message: 'Single track mode' });
+    iina.postMessage('mix-result', { success: true, message: 'Single track mode' });
   }
   
   const pos = mpv.getProperty('time-pos');
