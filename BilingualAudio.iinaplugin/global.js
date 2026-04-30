@@ -1,5 +1,4 @@
-// Global message handlers for Bilingual Audio Mixer
-const { core, mpv, global } = this;
+const { core, mpv, global } = iina;
 
 global.onMessage('test-message', () => {
   global.postMessage('mix-result', {
