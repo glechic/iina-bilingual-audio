@@ -1,13 +1,18 @@
 const { core, mpv, event, sidebar } = iina;
 
+core.osd('Audio Mixer plugin loaded');
+
 sidebar.onMessage('test-message', () => {
+  core.osd('Test message received');
   sidebar.postMessage('mix-result', {
     success: true,
-    message: 'Test received! global.js working.'
+    message: 'Test received! main.js working.'
   });
 });
 
 sidebar.onMessage('apply-mix', (data) => {
+  core.osd('Apply received: ' + data.mode);
+  
   sidebar.postMessage('mix-result', {
     success: true,
     message: 'Applying: ' + data.mode + ' (t1=' + data.track1Id + ', t2=' + data.track2Id + ')'
@@ -26,6 +31,7 @@ sidebar.onMessage('apply-mix', (data) => {
   }
   
   if (filter) {
+    core.osd('Setting filter: ' + filter);
     mpv.setProperty('lavfi-complex', filter);
     sidebar.postMessage('mix-result', {
       success: true,
