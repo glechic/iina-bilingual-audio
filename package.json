@@ -1,0 +1,16 @@
+{
+  "name": "iina-bilingual-audio-mixer",
+  "version": "1.0.0",
+  "description": "A plugin for [IINA](https://iina.io/) that enables bilingual audio playback by mixing multiple audio tracks using mpv's `lavfi-complex` filter.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^9.39.4"
+  },
+  "type": "module"
+}

@@ -1,7 +1,7 @@
 // Global message handlers for Bilingual Audio Mixer
 const { core, mpv, global } = this;
 
-global.onMessage('test-message', (data) => {
+global.onMessage('test-message', () => {
   global.postMessage('mix-result', {
     success: true,
     message: 'Test received! global.js working.'
