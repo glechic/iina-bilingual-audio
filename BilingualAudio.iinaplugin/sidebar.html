@@ -168,13 +168,13 @@
       bar.className = 'status-bar ' + (type || '');
     }
     
-    debug('global available: ' + (typeof global !== 'undefined'));
-    if (typeof global !== 'undefined') {
-      debug('global.postMessage: ' + (typeof global.postMessage !== 'undefined'));
-      debug('global.onMessage: ' + (typeof global.onMessage !== 'undefined'));
+    debug('iina available: ' + (typeof iina !== 'undefined'));
+    if (typeof iina !== 'undefined') {
+      debug('iina.postMessage: ' + (typeof iina.postMessage !== 'undefined'));
+      debug('iina.onMessage: ' + (typeof iina.onMessage !== 'undefined'));
       setStatus('API Ready', 'working');
     } else {
-      setStatus('ERROR: global not available', 'error');
+      setStatus('ERROR: iina not available', 'error');
     }
     
     document.querySelectorAll('input[name="mode"]').forEach(radio => {
@@ -209,14 +209,14 @@
       messageCount++;
       debug('Test #' + messageCount + ' clicked');
       
-      if (global && global.postMessage) {
+      if (iina && iina.postMessage) {
         const msg = {test: true, count: messageCount, time: Date.now()};
         debug('Sending: ' + JSON.stringify(msg));
-        global.postMessage('test-message', msg);
+        iina.postMessage('test-message', msg);
         debug('Message sent', 'success');
         setStatus('Test message sent', 'working');
       } else {
-        debug('ERROR: global.postMessage not available', 'error');
+        debug('ERROR: iina.postMessage not available', 'error');
         setStatus('ERROR: Cannot send', 'error');
       }
     });
@@ -230,8 +230,8 @@
       
       debug('Apply: mode=' + mode + ' t1=' + t1 + ' t2=' + t2, 'info');
       
-      if (global && global.postMessage) {
-        global.postMessage('apply-mix', {
+      if (iina && iina.postMessage) {
+        iina.postMessage('apply-mix', {
           mode: mode,
           track1Id: t1,
           track2Id: t2,
@@ -246,8 +246,8 @@
       }
     });
     
-    if (global && global.onMessage) {
-      global.onMessage('tracks-loaded', (data) => {
+    if (iina && iina.onMessage) {
+      iina.onMessage('tracks-loaded', (data) => {
         debug('Received tracks-loaded', 'success');
         tracks = data.tracks || [];
         debug('Count: ' + tracks.length);
@@ -287,7 +287,7 @@
         setStatus('Ready - ' + tracks.length + ' tracks', 'working');
       });
       
-      global.onMessage('mix-result', (data) => {
+      iina.onMessage('mix-result', (data) => {
         debug('Result: ' + data.message, data.success ? 'success' : 'error');
         setStatus(data.message, data.success ? 'working' : 'error');
       });
