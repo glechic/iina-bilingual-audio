@@ -42,8 +42,10 @@ event.on('mpv.file-loaded', () => {
                    '[a1][a2]amix=inputs=2:duration=longest[ao]';
         }
         
+        core.osd('Filter: ' + (filter || 'empty'));
+        
         if (filter) {
-          core.osd('Setting filter: ' + filter);
+          core.osd('Setting filter');
           mpv.setProperty('lavfi-complex', filter);
           sidebar.postMessage('mix-result', {
             success: true,
