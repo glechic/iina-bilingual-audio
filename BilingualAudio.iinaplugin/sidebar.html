@@ -3,176 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, sans-serif;
       background: #1e1e1e;
-      color: #ffffff;
+      color: #fff;
       padding: 15px;
       font-size: 13px;
     }
+    h2 { font-size: 16px; margin-bottom: 15px; }
+    h3 { font-size: 12px; margin: 15px 0 8px 0; color: #999; text-transform: uppercase; }
     
-    h2 {
-      font-size: 16px;
-      margin-bottom: 15px;
-      font-weight: 600;
-    }
-    
-    h3 {
-      font-size: 12px;
-      margin: 15px 0 8px 0;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .section {
-      margin-bottom: 20px;
-    }
-    
-    .track-list {
-      background: rgba(255,255,255,0.05);
+    .debug-box {
+      background: #1a1a1a;
+      border: 1px solid #333;
       border-radius: 6px;
-      overflow: hidden;
-    }
-    
-    .track {
-      padding: 10px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      transition: background 0.2s;
-    }
-    
-    .track:last-child {
-      border-bottom: none;
-    }
-    
-    .track:hover {
-      background: rgba(255,255,255,0.08);
-    }
-    
-    .track.selected {
-      background: #007aff;
-    }
-    
-    .track-number {
-      font-weight: 600;
-      margin-right: 8px;
-    }
-    
-    .track-name {
-      color: #fff;
-    }
-    
-    .track-lang {
-      color: #999;
-      font-size: 11px;
-      margin-left: 6px;
-    }
-    
-    .track-selector {
-      display: flex;
-      gap: 10px;
+      padding: 12px;
       margin-bottom: 15px;
-    }
-    
-    .track-selector > div {
-      flex: 1;
-    }
-    
-    .track-selector label {
-      display: block;
+      font-family: monospace;
       font-size: 11px;
-      color: #999;
-      margin-bottom: 4px;
+      max-height: 250px;
+      overflow-y: auto;
     }
+    .debug-line { margin: 4px 0; }
+    .debug-line.error { color: #f44336; }
+    .debug-line.success { color: #4caf50; }
+    .debug-line.info { color: #2196f3; }
     
-    .track-selector select {
+    select {
       width: 100%;
       padding: 8px;
+      margin: 5px 0;
       background: rgba(255,255,255,0.1);
       border: 1px solid rgba(255,255,255,0.2);
       border-radius: 4px;
       color: #fff;
-      font-size: 12px;
     }
     
-    .mode-selector {
-      margin: 15px 0;
-    }
+    .mode-option { display: flex; align-items: center; padding: 8px 0; }
+    .mode-option input { margin-right: 10px; }
     
-    .mode-option {
-      display: flex;
-      align-items: center;
-      padding: 8px 0;
-      cursor: pointer;
-    }
-    
-    .mode-option input[type="radio"] {
-      margin-right: 10px;
-      cursor: pointer;
-    }
-    
-    .mode-option label {
-      cursor: pointer;
-      flex: 1;
-    }
-    
-    .mode-option .mode-desc {
-      font-size: 10px;
-      color: #666;
-      margin-top: 2px;
-    }
-    
-    .volume-controls {
-      background: rgba(255,255,255,0.05);
-      border-radius: 6px;
-      padding: 12px;
-      margin-top: 10px;
-    }
-    
-    .volume-control {
-      margin-bottom: 12px;
-    }
-    
-    .volume-control:last-child {
-      margin-bottom: 0;
-    }
-    
-    .volume-label {
+    .volume-control { margin: 10px 0; }
+    .volume-control label {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    
-    .volume-label span {
       font-size: 12px;
+      margin-bottom: 4px;
     }
-    
-    .volume-label .volume-value {
-      color: #007aff;
-      font-weight: 600;
-    }
-    
     input[type="range"] {
       width: 100%;
       height: 6px;
       -webkit-appearance: none;
-      appearance: none;
       background: rgba(255,255,255,0.2);
       border-radius: 3px;
-      outline: none;
     }
-    
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      appearance: none;
       width: 16px;
       height: 16px;
       background: #007aff;
@@ -180,378 +66,235 @@
       cursor: pointer;
     }
     
-    input[type="range"]::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
-      background: #007aff;
-      border-radius: 50%;
-      cursor: pointer;
-      border: none;
-    }
-    
-    .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    
+    .actions { display: flex; gap: 10px; margin-top: 20px; }
     button {
       flex: 1;
-      padding: 10px 16px;
+      padding: 10px;
       border: none;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
     }
+    button.primary { background: #007aff; color: #fff; }
+    button.primary:hover { background: #0051d5; }
+    button.secondary { background: rgba(255,255,255,0.15); color: #fff; }
+    button.secondary:hover { background: rgba(255,255,255,0.25); }
     
-    button.primary {
-      background: #007aff;
-      color: #fff;
-    }
+    .hidden { display: none; }
     
-    button.primary:hover {
-      background: #0051d5;
+    .status-bar {
+      background: #333;
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      text-align: center;
     }
-    
-    button.secondary {
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-    }
-    
-    button.secondary:hover {
-      background: rgba(255,255,255,0.25);
-    }
-    
-    .hidden {
-      display: none !important;
-    }
-    
-    .info {
-      background: rgba(255,200,0,0.1);
-      border: 1px solid rgba(255,200,0,0.3);
-      border-radius: 6px;
-      padding: 10px;
-      font-size: 11px;
-      color: #ffc800;
-      margin-top: 15px;
-    }
+    .status-bar.working { background: #2e7d32; }
+    .status-bar.error { background: #c62828; }
   </style>
 </head>
 <body>
   <h2>Audio Mixer</h2>
   
-  <div class="section">
-    <h3>Track Order</h3>
-    <div class="track-selector">
-      <div>
-        <label for="track1Select">Primary Track</label>
-        <select id="track1Select"></select>
-      </div>
-      <div>
-        <label for="track2Select">Secondary Track</label>
-        <select id="track2Select"></select>
-      </div>
-    </div>
+  <div class="status-bar" id="statusBar">Initializing...</div>
+  
+  <div class="debug-box" id="debugBox">
+    <div class="debug-line info">Starting...</div>
   </div>
   
-  <div class="section">
-    <h3>Mode</h3>
-    <div class="mode-selector">
-      <div class="mode-option">
-        <input type="radio" id="modeSingle" name="mode" value="single" checked>
-        <label for="modeSingle">
-          <div>Single Track</div>
-          <div class="mode-desc">Play only the primary track</div>
-        </label>
-      </div>
-      <div class="mode-option">
-        <input type="radio" id="modeStereo" name="mode" value="stereo">
-        <label for="modeStereo">
-          <div>Stereo (Left/Right)</div>
-          <div class="mode-desc">Primary to left speaker, secondary to right</div>
-        </label>
-      </div>
-      <div class="mode-option">
-        <input type="radio" id="modeMixed" name="mode" value="mixed">
-        <label for="modeMixed">
-          <div>Mixed (Both)</div>
-          <div class="mode-desc">Both tracks played simultaneously</div>
-        </label>
-      </div>
-    </div>
+  <div id="trackSection">
+    <h3>Track Selection</h3>
+    <select id="track1Select"></select>
+    <select id="track2Select"></select>
   </div>
   
-  <div class="section">
-    <h3 class="volume-title">Volume</h3>
-    <div class="volume-controls" id="volumeControls">
-      <div class="volume-control">
-        <div class="volume-label">
-          <span id="vol1Label">Track 1</span>
-          <span class="volume-value" id="vol1Value">100%</span>
-        </div>
-        <input type="range" id="vol1Slider" min="0" max="100" value="100">
-      </div>
-      <div class="volume-control">
-        <div class="volume-label">
-          <span id="vol2Label">Track 2</span>
-          <span class="volume-value" id="vol2Value">100%</span>
-        </div>
-        <input type="range" id="vol2Slider" min="0" max="100" value="100">
-      </div>
+  <h3>Mode</h3>
+  <div class="mode-option">
+    <input type="radio" name="mode" value="single" checked id="modeSingle">
+    <label for="modeSingle">Single Track</label>
+  </div>
+  <div class="mode-option">
+    <input type="radio" name="mode" value="stereo" id="modeStereo">
+    <label for="modeStereo">Stereo (Left/Right)</label>
+  </div>
+  <div class="mode-option">
+    <input type="radio" name="mode" value="mixed" id="modeMixed">
+    <label for="modeMixed">Mixed (Both)</label>
+  </div>
+  
+  <div id="volumeControls" class="hidden">
+    <h3>Volume</h3>
+    <div class="volume-control">
+      <label>
+        <span id="vol1Label">Track 1</span>
+        <span id="vol1Value">100%</span>
+      </label>
+      <input type="range" id="vol1Slider" min="0" max="100" value="100">
+    </div>
+    <div class="volume-control">
+      <label>
+        <span id="vol2Label">Track 2</span>
+        <span id="vol2Value">100%</span>
+      </label>
+      <input type="range" id="vol2Slider" min="0" max="100" value="100">
     </div>
   </div>
   
   <div class="actions">
     <button class="primary" id="applyBtn">Apply</button>
-    <button class="secondary" id="resetBtn">Reset</button>
     <button class="secondary" id="testBtn">Test</button>
-  </div>
-  
-  <div class="info hidden" id="reloadNotice">
-    Playback will reload to apply the audio mix.
-  </div>
-  
-  <div class="debug-box" id="debugBox" style="background:#d32f2f;color:#fff;padding:12px;margin:10px 0;border-radius:6px;font-size:12px;font-family:monospace;">
-    <div style="font-weight:bold;margin-bottom:8px;">DEBUG INFO</div>
-    <div id="debugContent">Loading...</div>
   </div>
 
   <script>
     let tracks = [];
     let currentMode = 'single';
+    let messageCount = 0;
     
-    function updateDebugInfo() {
-      const debugDiv = document.getElementById('debugContent');
-      if (!debugDiv) return;
-      
-      let html = `
-        <div>Tracks: ${tracks.length}</div>
-        <div>Mode: ${currentMode}</div>
-        <div>Vol1: ${document.getElementById('vol1Slider')?.value || 0}%, Vol2: ${document.getElementById('vol2Slider')?.value || 0}%</div>
-      `;
-      
-      if (tracks.length > 0) {
-        html += `<div style="margin-top:8px;">T1: id=${tracks[0].id} "${tracks[0].title}"</div>`;
-        if (tracks[1]) {
-          html += `<div>T2: id=${tracks[1].id} "${tracks[1].title}"</div>`;
-        }
-      }
-      
-      debugDiv.innerHTML = html;
-    }
-      }
-      updateDebugInfo();
-    });
-    
-    function updateDebugInfo() {
-      if (!debugDiv) return;
-      
-      let html = `
-        <strong>DEBUG:</strong><br>
-        Tracks: ${tracks.length}<br>
-        Current Mode: ${currentMode}<br>
-        Vol1: ${document.getElementById('vol1Slider').value}%, Vol2: ${document.getElementById('vol2Slider').value}%
-      `;
-      
-      if (tracks.length > 0) {
-        const t1 = tracks[0], t2 = tracks[1];
-        html += `<br>T1: id=${t1.id}, title="${t1.title}"<br>T2: id=${t2?.id}, title="${t2?.title}"`;
-      }
-      
-      debugDiv.innerHTML = html;
+    function debug(msg, type) {
+      const box = document.getElementById('debugBox');
+      const line = document.createElement('div');
+      line.className = 'debug-line ' + (type || 'info');
+      const time = new Date().toLocaleTimeString();
+      line.textContent = '[' + time + '] ' + msg;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
     }
     
-    iina.onMessage('mix-reset', (data) => {
-      updateMode('single');
-      document.getElementById('vol1Slider').value = 100;
-      document.getElementById('vol2Slider').value = 100;
-      updateVolumeLabels();
-      
-      if (tracks.length > 0) {
-        document.getElementById('track1Select').value = tracks[0].id;
-        if (tracks.length > 1) {
-          document.getElementById('track2Select').value = tracks[1].id;
-        }
-      }
-    });
-    
-    function populateTrackSelectors() {
-      const select1 = document.getElementById('track1Select');
-      const select2 = document.getElementById('track2Select');
-      
-      select1.innerHTML = '';
-      select2.innerHTML = '';
-      
-      if (!tracks || tracks.length === 0) {
-        select1.innerHTML = '<option value="">No tracks</option>';
-        select2.innerHTML = '<option value="">No tracks</option>';
-        return;
-      }
-      
-      // Populate both selects with all tracks
-      tracks.forEach((track) => {
-        const trackId = track.id;
-        const trackTitle = track.title || track.lang || `Track ${trackId}`;
-        const displayText = `Track ${trackId}: ${trackTitle}`;
-        
-        // Create option for select1
-        const option1 = document.createElement('option');
-        option1.value = trackId;
-        option1.textContent = displayText;
-        select1.appendChild(option1);
-        
-        // Create option for select2
-        const option2 = document.createElement('option');
-        option2.value = trackId;
-        option2.textContent = displayText;
-        select2.appendChild(option2);
-      });
-      
-      // Set default selections
-      if (tracks.length >= 1) {
-        select1.value = tracks[0].id;
-      }
-      if (tracks.length > 1) {
-        select2.value = tracks[1].id;
-      }
+    function setStatus(msg, type) {
+      const bar = document.getElementById('statusBar');
+      bar.textContent = msg;
+      bar.className = 'status-bar ' + (type || '');
     }
     
-    function updateMode(mode) {
-      currentMode = mode;
-      document.querySelector(`input[value="${mode}"]`).checked = true;
-      updateVolumeVisibility();
-      updateVolumeLabels();
-    }
-    
-    function updateVolumeVisibility() {
-      const volumeControls = document.getElementById('volumeControls');
-      const isSingle = currentMode === 'single';
-      
-      if (isSingle) {
-        volumeControls.classList.add('hidden');
-      } else {
-        volumeControls.classList.remove('hidden');
-      }
-    }
-    
-    function updateVolumeLabels() {
-      const vol1Label = document.getElementById('vol1Label');
-      const vol2Label = document.getElementById('vol2Label');
-      
-      if (currentMode === 'stereo') {
-        vol1Label.textContent = 'Left Channel (Track 1)';
-        vol2Label.textContent = 'Right Channel (Track 2)';
-      } else if (currentMode === 'mixed') {
-        vol1Label.textContent = 'Track 1 Volume';
-        vol2Label.textContent = 'Track 2 Volume';
-      }
-    }
-    
-    function applyMix() {
-      const mode = currentMode;
-      const track1Id = parseInt(document.getElementById('track1Select').value);
-      const track2Id = parseInt(document.getElementById('track2Select').value);
-      const vol1 = parseInt(document.getElementById('vol1Slider').value) / 100;
-      const vol2 = parseInt(document.getElementById('vol2Slider').value) / 100;
-      
-      if (track1Id === track2Id && mode !== 'single') {
-        alert('Please select different tracks for stereo/mixed mode.');
-        return;
-      }
-      
-      // Show in debug
-      const debugDiv = document.getElementById('debugContent');
-      if (debugDiv) {
-        debugDiv.innerHTML += `<div style="margin-top:10px;border-top:1px solid #fff;padding-top:8px;"><strong>APPLY CLICKED</strong></div>`;
-        debugDiv.innerHTML += `<div>Mode: ${mode}</div>`;
-        debugDiv.innerHTML += `<div>T1: ${track1Id}, T2: ${track2Id}</div>`;
-        debugDiv.innerHTML += `<div>V1: ${vol1}, V2: ${vol2}</div>`;
-        
-        // Try to post message
-        if (typeof iina !== 'undefined' && iina.postMessage) {
-          debugDiv.innerHTML += `<div>Calling iina.postMessage...</div>`;
-          try {
-            iina.postMessage('apply-mix', {
-              mode: mode,
-              track1Id: track1Id,
-              track2Id: track2Id,
-              vol1: vol1,
-              vol2: vol2
-            });
-            debugDiv.innerHTML += `<div style="color:#4caf50;"><strong>✓ Message sent successfully</strong></div>`;
-          } catch (e) {
-            debugDiv.innerHTML += `<div style="color:#ffeb3b;"><strong>ERROR: ${e.message}</strong></div>`;
-          }
-        } else {
-          debugDiv.innerHTML += `<div style="color:#ffeb3b;"><strong>ERROR: iina.postMessage not available</strong></div>`;
-          return;
-        }
-      }
-      
-      updateDebugInfo();
-      
-      if (mode !== 'single') {
-        document.getElementById('reloadNotice').classList.remove('hidden');
-        setTimeout(() => {
-          document.getElementById('reloadNotice').classList.add('hidden');
-        }, 3000);
-      }
-    }
-    
-    function resetMix() {
-      if (typeof iina !== 'undefined' && iina.postMessage) {
-        iina.postMessage('reset-mix');
-      }
-    }
-    
-    function testMessage() {
-      const debugDiv = document.getElementById('debugContent');
-      if (debugDiv) {
-        debugDiv.innerHTML += `<div style="margin-top:10px;border-top:1px solid #fff;padding-top:8px;"><strong style="color:#4fc3f7;">TEST BUTTON CLICKED</strong></div>`;
-      }
-      if (typeof iina !== 'undefined' && iina.postMessage) {
-        try {
-          iina.postMessage('test-message', { test: true });
-          if (debugDiv) {
-            debugDiv.innerHTML += `<div style="color:#4fc3f7;">Test message sent</div>`;
-          }
-        } catch (e) {
-          if (debugDiv) {
-            debugDiv.innerHTML += `<div style="color:#ffeb3b;">Test ERROR: ${e.message}</div>`;
-          }
-        }
-      } else {
-        if (debugDiv) {
-          debugDiv.innerHTML += `<div style="color:#ffeb3b;"><strong>ERROR: No iina.postMessage</strong></div>`;
-        }
-      }
+    debug('global available: ' + (typeof global !== 'undefined'));
+    if (typeof global !== 'undefined') {
+      debug('global.postMessage: ' + (typeof global.postMessage !== 'undefined'));
+      debug('global.onMessage: ' + (typeof global.onMessage !== 'undefined'));
+      setStatus('API Ready', 'working');
+    } else {
+      setStatus('ERROR: global not available', 'error');
     }
     
     document.querySelectorAll('input[name="mode"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
         currentMode = e.target.value;
-        updateVolumeVisibility();
-        updateVolumeLabels();
+        debug('Mode: ' + currentMode);
+        
+        const volControls = document.getElementById('volumeControls');
+        if (currentMode === 'single') {
+          volControls.classList.add('hidden');
+        } else {
+          volControls.classList.remove('hidden');
+          if (currentMode === 'stereo') {
+            document.getElementById('vol1Label').textContent = 'Left Channel';
+            document.getElementById('vol2Label').textContent = 'Right Channel';
+          } else {
+            document.getElementById('vol1Label').textContent = 'Track 1';
+            document.getElementById('vol2Label').textContent = 'Track 2';
+          }
+        }
       });
     });
     
     document.getElementById('vol1Slider').addEventListener('input', (e) => {
       document.getElementById('vol1Value').textContent = e.target.value + '%';
     });
-    
     document.getElementById('vol2Slider').addEventListener('input', (e) => {
       document.getElementById('vol2Value').textContent = e.target.value + '%';
     });
     
-    // Add button click handlers
-    document.getElementById('applyBtn').addEventListener('click', applyMix);
-    document.getElementById('resetBtn').addEventListener('click', resetMix);
-    document.getElementById('testBtn').addEventListener('click', testMessage);
+    document.getElementById('testBtn').addEventListener('click', () => {
+      messageCount++;
+      debug('Test #' + messageCount + ' clicked');
+      
+      if (global && global.postMessage) {
+        const msg = {test: true, count: messageCount, time: Date.now()};
+        debug('Sending: ' + JSON.stringify(msg));
+        global.postMessage('test-message', msg);
+        debug('Message sent', 'success');
+        setStatus('Test message sent', 'working');
+      } else {
+        debug('ERROR: global.postMessage not available', 'error');
+        setStatus('ERROR: Cannot send', 'error');
+      }
+    });
     
-    updateVolumeVisibility();
-    updateVolumeLabels();
+    document.getElementById('applyBtn').addEventListener('click', () => {
+      const mode = currentMode;
+      const t1 = parseInt(document.getElementById('track1Select').value);
+      const t2 = parseInt(document.getElementById('track2Select').value);
+      const v1 = parseInt(document.getElementById('vol1Slider').value) / 100;
+      const v2 = parseInt(document.getElementById('vol2Slider').value) / 100;
+      
+      debug('Apply: mode=' + mode + ' t1=' + t1 + ' t2=' + t2, 'info');
+      
+      if (global && global.postMessage) {
+        global.postMessage('apply-mix', {
+          mode: mode,
+          track1Id: t1,
+          track2Id: t2,
+          vol1: v1,
+          vol2: v2
+        });
+        debug('Apply message sent', 'success');
+        setStatus('Applying ' + mode + ' mode...', 'working');
+      } else {
+        debug('ERROR: Cannot send', 'error');
+        setStatus('ERROR', 'error');
+      }
+    });
+    
+    if (global && global.onMessage) {
+      global.onMessage('tracks-loaded', (data) => {
+        debug('Received tracks-loaded', 'success');
+        tracks = data.tracks || [];
+        debug('Count: ' + tracks.length);
+        
+        const s1 = document.getElementById('track1Select');
+        const s2 = document.getElementById('track2Select');
+        s1.innerHTML = '';
+        s2.innerHTML = '';
+        
+        if (tracks.length === 0) {
+          debug('ERROR: No tracks!', 'error');
+          s1.innerHTML = '<option>No tracks</option>';
+          s2.innerHTML = '<option>No tracks</option>';
+          return;
+        }
+        
+        tracks.forEach((t, i) => {
+          const id = t.id !== undefined ? t.id : (i + 1);
+          const title = t.title || t.lang || 'Track ' + id;
+          const text = 'Track ' + id + ': ' + title;
+          
+          const opt1 = document.createElement('option');
+          opt1.value = id;
+          opt1.textContent = text;
+          s1.appendChild(opt1);
+          
+          const opt2 = document.createElement('option');
+          opt2.value = id;
+          opt2.textContent = text;
+          s2.appendChild(opt2);
+        });
+        
+        if (tracks.length >= 1) s1.value = tracks[0].id || 1;
+        if (tracks.length > 1) s2.value = tracks[1].id || 2;
+        
+        debug('Selectors populated', 'success');
+        setStatus('Ready - ' + tracks.length + ' tracks', 'working');
+      });
+      
+      global.onMessage('mix-result', (data) => {
+        debug('Result: ' + data.message, data.success ? 'success' : 'error');
+        setStatus(data.message, data.success ? 'working' : 'error');
+      });
+    }
+    
+    debug('Sidebar initialized', 'success');
+    setStatus('Ready');
   </script>
 </body>
 </html>
