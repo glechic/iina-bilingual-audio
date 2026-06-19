@@ -21,11 +21,50 @@
     .small { font-size: 11px; color: rgba(127, 127, 127, 1); }
     .section { margin-bottom: 12px; }
     .disabled { opacity: 0.4; pointer-events: none; }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .toggle-row span { font-size: 13px; font-weight: 600; }
+    .toggle-row input[type="checkbox"] {
+      width: 38px;
+      height: 22px;
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 11px;
+      background: rgba(120,120,120,0.4);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      accent-color: #007aff;
+    }
+    .toggle-row input[type="checkbox"]::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 2px;
+      top: 2px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-row input[type="checkbox"]:checked {
+      background: #007aff;
+    }
+    .toggle-row input[type="checkbox"]:checked::before {
+      transform: translateX(16px);
+    }
     .section-title { font-size: 12px; font-weight: 600; margin: 12px 0 2px; }
     .vol-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
     .vol-row label { width: 50px; flex-shrink: 0; }
     .vol-row input[type="range"] { flex: 1; }
     .vol-row .vol-val { width: 36px; text-align: right; flex-shrink: 0; font-size: 11px; }
+    .channel-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+    .channel-row .section-title { margin: 0; width: 80px; flex-shrink: 0; }
+    .channel-row select { flex: 1; }
     .swap-btn {
       margin: 12px auto;
       display: block;
@@ -43,12 +82,14 @@
 </head>
 <body>
   <div class="section">
-    <label>
-      <input type="checkbox" id="bilingualToggle" />
-      Bilingual mode
-    </label>
+    <div class="toggle-row">
+      <span>Bilingual mode</span>
+      <input type="checkbox" id="bilingualToggle">
+    </div>
     <p class="small">Send one audio track to the left channel and another to the right.</p>
   </div>
+
+  <hr style="border:none; border-top:1px solid rgba(127,127,127,0.2); margin:12px 0;">
 
   <div class="section disabled" id="channelSection">
     <p class="section-title" style="margin-top:0;">Left channel</p>
