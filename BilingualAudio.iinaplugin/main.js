@@ -2,9 +2,12 @@ const { core, mpv, sidebar, menu, event, preferences, file } = iina;
 
 console.log('Audio Mixer plugin loaded');
 
-menu.addItem(
-  menu.item('Show Audio Mixer', () => sidebar.show())
-);
+let currentTracks = [];
+let currentLeftId = null;
+let currentRightId = null;
+let currentVol1 = 1;
+let currentVol2 = 1;
+let bilingualOn = false;
 
 const SELECTIONS_FILE = '@data/selections.json';
 
@@ -65,6 +68,8 @@ function disableBilingual() {
     mpv.set('aid', savedAid);
     savedAid = null;
   }
+  bilingualOn = false;
+  refreshMenu();
 }
 
 function enableBilingual(t1, t2, vol1, vol2) {
@@ -73,6 +78,113 @@ function enableBilingual(t1, t2, vol1, vol2) {
   }
   mpv.set('aid', 'no');
   mpv.set('lavfi-complex', buildBilingualFilter(t1, t2, vol1, vol2));
+  currentLeftId = t1;
+  currentRightId = t2;
+  currentVol1 = vol1;
+  currentVol2 = vol2;
+  bilingualOn = true;
+  refreshMenu();
+}
+
+// --- Menu ---
+
+const toggleMenu = menu.item('Toggle Bilingual Mode', toggleBilingual, { keyBinding: 'Ctrl+Shift+B' });
+const swapMenu = menu.item('Swap Left/Right', swapChannels, { enabled: false });
+let leftMenu = menu.item('Left Channel', null, { enabled: false });
+let rightMenu = menu.item('Right Channel', null, { enabled: false });
+
+function buildMenu() {
+  menu.removeAllItems();
+  menu.addItem(toggleMenu);
+  menu.addItem(menu.item('Show Audio Mixer', () => sidebar.show()));
+  menu.addItem(menu.separator());
+  leftMenu = menu.item('Left Channel', null, { enabled: currentTracks.length >= 2 });
+  rightMenu = menu.item('Right Channel', null, { enabled: currentTracks.length >= 2 });
+  currentTracks.forEach((t) => {
+    const id = t.id;
+    const title = t.title || t.lang || ('Track ' + id);
+    leftMenu.addSubMenuItem(menu.item(title, () => selectLeft(id), { selected: id === currentLeftId }));
+    rightMenu.addSubMenuItem(menu.item(title, () => selectRight(id), { selected: id === currentRightId }));
+  });
+  menu.addItem(leftMenu);
+  menu.addItem(rightMenu);
+  menu.addItem(swapMenu);
+  menu.forceUpdate();
+}
+
+function selectLeft(id) {
+  currentLeftId = id;
+  if (bilingualOn) {
+    enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+    persistCurrent();
+    notifySidebar();
+  } else {
+    buildMenu();
+  }
+}
+
+function selectRight(id) {
+  currentRightId = id;
+  if (bilingualOn) {
+    enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+    persistCurrent();
+    notifySidebar();
+  } else {
+    buildMenu();
+  }
+}
+
+function toggleBilingual() {
+  if (currentTracks.length < 2) return;
+  if (bilingualOn) {
+    disableBilingual();
+    saveSelection(mpv.getString('path'), { enabled: false });
+    sidebar.postMessage('selection-restored', { enabled: false });
+  } else {
+    if (currentLeftId === null) currentLeftId = currentTracks[0].id;
+    if (currentRightId === null) currentRightId = currentTracks[1].id;
+    enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+    persistCurrent();
+    notifySidebar();
+  }
+}
+
+function swapChannels() {
+  if (!bilingualOn) return;
+  const tmp = currentLeftId;
+  currentLeftId = currentRightId;
+  currentRightId = tmp;
+  enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+  persistCurrent();
+  notifySidebar();
+}
+
+function persistCurrent() {
+  saveSelection(mpv.getString('path'), {
+    enabled: true,
+    leftId: currentLeftId,
+    rightId: currentRightId,
+    vol1: currentVol1,
+    vol2: currentVol2,
+    savedAid: savedAid
+  });
+}
+
+function notifySidebar() {
+  sidebar.postMessage('selection-restored', {
+    enabled: bilingualOn,
+    leftId: currentLeftId,
+    rightId: currentRightId,
+    vol1: currentVol1,
+    vol2: currentVol2
+  });
+}
+
+function refreshMenu() {
+  toggleMenu.selected = bilingualOn;
+  toggleMenu.enabled = currentTracks.length >= 2;
+  swapMenu.enabled = bilingualOn;
+  buildMenu();
 }
 
 event.on('iina.window-loaded', () => {
@@ -118,7 +230,10 @@ function getAudioTracks() {
 event.on('mpv.file-loaded', () => {
   setTimeout(() => {
     const audioTracks = getAudioTracks();
+    currentTracks = audioTracks;
     if (audioTracks.length > 1) {
+      if (currentLeftId === null) currentLeftId = audioTracks[0].id;
+      if (currentRightId === null) currentRightId = audioTracks[1].id;
       sidebar.postMessage('tracks-loaded', { tracks: audioTracks });
       const saved = loadSelection(mpv.getString('path'));
       if (saved) {
@@ -139,5 +254,6 @@ event.on('mpv.file-loaded', () => {
         sidebar.show();
       }
     }
+    refreshMenu();
   }, 1000);
 });

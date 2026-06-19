@@ -25,6 +25,8 @@ Bind a key (e.g. `Cmd+Shift+B`) to toggle bilingual mode on/off without opening 
 - Use `iina.input` to capture the key
 - Call the same enable/disable path as the sidebar handler
 
+**Done** — `Ctrl+Shift+B` bound to the "Toggle Bilingual Mode" menu item.
+
 ### External audio file as one channel
 
 Allow loading an external audio file (e.g. a separate `.m4a`) as one of the two channels, paired with an internal track.
@@ -59,6 +61,8 @@ Only a single "Show Audio Mixer" menu item exists today. Add more menu entries s
 - Reload/refresh track list
 - Group items under a submenu (e.g. `Audio Mixer ▸`) via `menu.addItem` with nested `menu.item`s
 - Reflect the current bilingual state with a checkmark/indicator if `menu.item` supports it
+
+**Done** — Plugin menu now has Toggle Bilingual Mode (with checkmark + `Ctrl+Shift+B`), Show Audio Mixer, Left/Right Channel submenus with track checkmarks, and Swap Left/Right.
 
 ## Low priority
 
