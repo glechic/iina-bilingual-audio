@@ -83,8 +83,8 @@
       if (tracks.length === 0) return;
       tracks.forEach((t, i) => {
         const id = t.id !== undefined ? t.id : (i + 1);
-        const title = t.title || t.lang || ('Track ' + id);
-        const text = 'Track ' + id + ': ' + title;
+        const title = t.title || t.lang || id;
+        const text = title;
         l.add(new Option(text, id));
         r.add(new Option(text, id));
       });

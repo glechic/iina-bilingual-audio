@@ -153,15 +153,14 @@ function buildMenu() {
   menu.removeAllItems();
   menu.addItem(toggleMenu);
   menu.addItem(menu.item('Show Audio Mixer', () => sidebar.show()));
-  menu.addItem(menu.separator());
 
   const hasTracks = state.tracks.length >= 2;
-  const leftMenu = menu.item('Left Channel', null, { enabled: hasTracks });
-  const rightMenu = menu.item('Right Channel', null, { enabled: hasTracks });
+  const leftMenu = menu.item('Left Channel', null, { enabled: hasTracks && state.enabled });
+  const rightMenu = menu.item('Right Channel', null, { enabled: hasTracks && state.enabled });
 
   state.tracks.forEach((t) => {
     const id = t.id;
-    const title = t.title || t.lang || ('Track ' + id);
+    const title = t.title || t.lang || String(id);
     leftMenu.addSubMenuItem(menu.item(title, () => {
       state.leftId = id;
       if (state.enabled) { enableBilingual(state.leftId, state.rightId, state.vol1, state.vol2); persistCurrent(); notifySidebar(); }
@@ -175,8 +174,8 @@ function buildMenu() {
   });
 
   menu.addItem(leftMenu);
-  menu.addItem(rightMenu);
   menu.addItem(swapMenu);
+  menu.addItem(rightMenu);
   menu.forceUpdate();
 }
 
