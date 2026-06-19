@@ -43,29 +43,6 @@ Surface external audio tracks (loaded via `audio-add` or demuxer attachments) in
 - Handle the external track being removed mid-session (rebuild dropdowns on `track-list` change if an event is available; otherwise on a manual refresh / menu entry)
 - Validate the external track has a stable `id` before referencing it in the `lavfi-complex` graph
 
-### System theme support (dark mode)
-
-Sidebar currently hardcodes light colors (`rgba(0, 0, 0, 0.5)`). Adopt IINA's native theming so the sidebar matches the system appearance.
-
-- Add `color-scheme: light dark` on `:root`
-- Replace hardcoded colors with CSS variables (`--text-primary`, `--text-secondary`, `--input-border`, `--bg`)
-- Provide `@media (prefers-color-scheme: dark)` overrides (see the opensub plugin reference in `IINA Plugin Investigation.md`)
-- Apply the same variables to `preferences.html`
-
-**Done** — sidebar now uses `color-scheme: light dark`, CSS variables for all colors, and `@media (prefers-color-scheme: dark)` overrides. Selects, buttons, and range sliders all themed for both light and dark.
-
-### Expand menu integration
-
-Only a single "Show Audio Mixer" menu item exists today. Add more menu entries so common actions are reachable without opening the sidebar.
-
-- Toggle bilingual mode on/off
-- Swap left/right channels
-- Reload/refresh track list
-- Group items under a submenu (e.g. `Audio Mixer ▸`) via `menu.addItem` with nested `menu.item`s
-- Reflect the current bilingual state with a checkmark/indicator if `menu.item` supports it
-
-**Done** — Plugin menu now has Toggle Bilingual Mode (with checkmark + `Ctrl+Shift+B`), Show Audio Mixer, Left/Right Channel submenus with track checkmarks, and Swap Left/Right.
-
 ## Low priority
 
 ### Sync adjustment between tracks
@@ -86,12 +63,6 @@ ffmpeg -i input.mkv -filter_complex \
 
 
 ## Bugs
-
-### setTimeout on file-loaded delays restored bilingual audio by 1s
-
-`mpv.file-loaded` used `setTimeout(..., 1000)` before reading tracks and applying a saved bilingual selection, causing a 1-second silence gap at the start of every reopened file.
-
-**Fixed** — the saved selection is now applied via an `mpv.addHook('on_load', ...)` hook, which runs after the file is probed (tracks are known) but before audio output starts. The `mpv.file-loaded` handler now only updates the sidebar/menu; no timeout needed.
 
 ### Changing audio track occasionally jumps playback forward 2-10 seconds
 
