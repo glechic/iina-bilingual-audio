@@ -227,33 +227,56 @@ function getAudioTracks() {
   return tracks;
 }
 
-event.on('mpv.file-loaded', () => {
-  setTimeout(() => {
-    const audioTracks = getAudioTracks();
-    currentTracks = audioTracks;
-    if (audioTracks.length > 1) {
-      if (currentLeftId === null) currentLeftId = audioTracks[0].id;
-      if (currentRightId === null) currentRightId = audioTracks[1].id;
-      sidebar.postMessage('tracks-loaded', { tracks: audioTracks });
-      const saved = loadSelection(mpv.getString('path'));
-      if (saved) {
-        sidebar.postMessage('selection-restored', saved);
-        if (saved.enabled) {
-          if (saved.savedAid !== undefined) {
-            savedAid = saved.savedAid;
-          }
-          enableBilingual(
-            saved.leftId,
-            saved.rightId,
-            saved.vol1 !== undefined ? saved.vol1 : 1,
-            saved.vol2 !== undefined ? saved.vol2 : 1
-          );
-        }
+// Apply a saved bilingual selection BEFORE playback starts, so there's no
+// 1-second silence gap at the beginning of a reopened file. The on_load hook
+// runs after the file is probed (tracks are known) but before audio output.
+mpv.addHook('on_load', 50, (next) => {
+  try {
+    const path = mpv.getString('path');
+    const saved = loadSelection(path);
+    console.log('on_load hook: path=' + path + ' saved=' + JSON.stringify(saved));
+    if (saved && saved.enabled && saved.leftId !== undefined && saved.rightId !== undefined) {
+      currentLeftId = saved.leftId;
+      currentRightId = saved.rightId;
+      currentVol1 = saved.vol1 !== undefined ? saved.vol1 : 1;
+      currentVol2 = saved.vol2 !== undefined ? saved.vol2 : 1;
+      if (saved.savedAid !== undefined) {
+        savedAid = saved.savedAid;
       }
-      if (preferences.get('auto_show')) {
-        sidebar.show();
+      enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+      console.log('on_load: bilingual enabled in hook');
+    }
+  } catch (e) {
+    console.log('on_load hook error:', e);
+  }
+  next();
+});
+
+event.on('mpv.file-loaded', () => {
+  const audioTracks = getAudioTracks();
+  currentTracks = audioTracks;
+  if (audioTracks.length > 1) {
+    if (currentLeftId === null) currentLeftId = audioTracks[0].id;
+    if (currentRightId === null) currentRightId = audioTracks[1].id;
+    sidebar.postMessage('tracks-loaded', { tracks: audioTracks });
+    const saved = loadSelection(mpv.getString('path'));
+    if (saved) {
+      sidebar.postMessage('selection-restored', saved);
+      if (saved.enabled && !bilingualOn) {
+        if (saved.savedAid !== undefined) {
+          savedAid = saved.savedAid;
+        }
+        enableBilingual(
+          saved.leftId,
+          saved.rightId,
+          saved.vol1 !== undefined ? saved.vol1 : 1,
+          saved.vol2 !== undefined ? saved.vol2 : 1
+        );
       }
     }
-    refreshMenu();
-  }, 1000);
+    if (preferences.get('auto_show')) {
+      sidebar.show();
+    }
+  }
+  refreshMenu();
 });

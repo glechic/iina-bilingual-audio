@@ -87,13 +87,9 @@ ffmpeg -i input.mkv -filter_complex \
 
 ### setTimeout on file-loaded delays restored bilingual audio by 1s
 
-`mpv.file-loaded` uses `setTimeout(..., 1000)` before reading `core.audio.tracks` / `track-list` and applying a saved bilingual selection. When a saved selection exists for the file being opened, playback starts, nothing comes out of the speakers, and the audio only appears once the timeout fires and the `lavfi-complex` filter is installed. The 1s silence at the start of every reopened file is jarring.
+`mpv.file-loaded` used `setTimeout(..., 1000)` before reading tracks and applying a saved bilingual selection, causing a 1-second silence gap at the start of every reopened file.
 
-**Fix:** drop the `setTimeout` and either
-- wait on a proper "tracks are ready" signal from `core.audio.tracks` / an mpv property change (`track-list` updates after demux) instead of a fixed delay, or
-- if a hard delay is unavoidable for the very first frame, apply the filter inside the same tick the tracks become available so the player never starts without the bilingual graph in place.
-
-Verify by opening a file with a saved bilingual selection: audio should be present from frame one with no perceptible gap.
+**Fixed** — the saved selection is now applied via an `mpv.addHook('on_load', ...)` hook, which runs after the file is probed (tracks are known) but before audio output starts. The `mpv.file-loaded` handler now only updates the sidebar/menu; no timeout needed.
 
 ## Publishing
 
