@@ -1,563 +1,142 @@
-# IINA Plugin for Bilingual Audio - Investigation
+# IINA Bilingual Audio Plugin — Investigation Notes
 
-## Overview
+Notes from investigating the IINA plugin API while building the Bilingual Audio Mixer. Kept as a reference for the API details discovered, including the parts that differed from initial assumptions.
 
-IINA is a macOS video player based on mpv. It has a plugin system that allows extending functionality with JavaScript. This document investigates creating a plugin for bilingual audio output.
-
-## IINA Plugin Architecture
-
-### Plugin Structure
+## Plugin structure
 
 ```
 BilingualAudio.iinaplugin/
 ├── Info.json          # Plugin metadata
-├── main.js            # Main entry (per-player)
-├── global.js          # Global entry (optional)
-├── preferences.html   # Settings UI (optional)
-├── sidebar.html       # Sidebar panel (optional)
-└── overlay.html       # Video overlay (optional)
+├── main.js            # Main entry (per-player, has access to mpv/sidebar/etc.)
+├── preferences.html   # Settings UI (uses data-pref-key attributes)
+└── sidebar.html       # Sidebar panel
 ```
 
-### Info.json Structure
+`global.js` (global entry) exists for plugins that need cross-player state. We don't use it — sidebar message handlers belong in `main.js` because `sidebar` is only available there.
+
+### Info.json (current)
 
 ```json
 {
   "name": "Bilingual Audio Mixer",
-  "identifier": "com.biling-streaming.iina-plugin",
+  "identifier": "com.bilingual-audio.iina-plugin",
   "version": "1.0.0",
-  "author": {
-    "name": "Your Name",
-    "email": "you@example.com"
-  },
+  "author": { "name": "Your Name", "email": "you@example.com" },
   "entry": "main.js",
-  "description": "Mix multiple audio tracks for bilingual playback",
-  "sidebarTab": {
-    "name": "Audio Mixer"
-  },
+  "description": "Mix bilingual audio tracks with left/right channel separation",
+  "sidebarTab": { "name": "Audio Mixer" },
   "preferencesPage": "preferences.html",
-  "permissions": [
-    "show-osd",
-    "network-request"
-  ],
-  "allowedDomains": ["*"],
-  "ghRepo": "username/biling-audio-iina",
-  "ghVersion": 1
+  "permissions": ["show-osd"],
+  "allowedDomains": []
 }
 ```
 
-## Key APIs for Audio Control
+## IINA Plugin API — what actually works
 
-### 1. Audio Track Management (`iina.core.audio`)
+### `iina.mpv`
 
-```javascript
-const { core } = iina;
+The mpv module is the bridge to mpv's property and command system. The real method names (verified against the [official docs](https://docs.iina.io/interfaces/IINA.API.MPV.html)):
 
-// Get available audio tracks
-const tracks = core.audio.tracks;
-// [{ id: 1, title: "English", lang: "en" }, { id: 2, title: "Spanish", lang: "es" }]
+| Method | Purpose |
+|---|---|
+| `mpv.set(name, value)` | Set a property (replaces the imagined `mpv.setProperty`) |
+| `mpv.getString(name)` | Read a property as string |
+| `mpv.getNumber(name)` | Read a property as number |
+| `mpv.getFlag(name)` | Read a boolean property |
+| `mpv.getNative(name)` | Read a property as a native JS object (lists, dicts) |
+| `mpv.command(name, [args])` | Run an mpv command (args is an **array**, not rest args) |
+| `mpv.addHook(name, priority, cb)` | Register an mpv hook |
 
-// Switch audio track
-core.audio.id = trackId;
+**Important:** `mpv.setProperty` / `mpv.getProperty` do **not** exist — early versions of this plugin used them and they silently failed. Use `mpv.set` / `mpv.getString` / `mpv.getNative` / `mpv.getNumber`.
 
-// Load external audio track
-core.audio.loadTrack("/path/to/audio.m4a");
+`mpv` is **only available in the main entry** (`main.js`), not in `global.js`.
 
-// Control volume
-core.audio.volume = 100;  // 0-100 (or higher if volume-max allows)
+### `iina.core`
 
-// Audio delay (for sync)
-core.audio.delay = 0.5;  // seconds
+High-level player state:
 
-// Mute/unmute
-core.audio.muted = true;
-```
+- `core.audio.tracks` — array of `{ id, title, lang, ... }` for available audio tracks
+- `core.audio.id = N` — switch to audio track N
 
-### 2. MPV Commands (`iina.mpv`)
+In practice `core.audio.tracks` can sometimes be empty on `mpv.file-loaded`; fall back to `mpv.getNative('track-list')` and filter for `type === 'audio'`.
 
-IINA uses mpv under the hood, so we can access mpv's powerful audio filter capabilities:
+### `iina.sidebar`
 
-```javascript
-const { mpv } = iina;
+- `sidebar.loadFile('sidebar.html')` — load the sidebar content
+- `sidebar.show()` — reveal the sidebar tab
+- `sidebar.postMessage(name, data)` — send a message to the sidebar's JS
+- `sidebar.onMessage(name, cb)` — receive a message from the sidebar's JS
 
-// Get mpv property
-const audioParams = mpv.getProperty('audio-params');
+Inside the sidebar's HTML, the global `iina` object exposes the inverse:
+- `iina.postMessage(name, data)` — send to plugin
+- `iina.onMessage(name, cb)` — receive from plugin
 
-// Set mpv property
-mpv.setProperty('volume', 100);
+Register `sidebar.onMessage` handlers **once** (e.g. on `iina.window-loaded`), not every time `file-loaded` fires — otherwise you stack duplicate handlers.
 
-// Run mpv command
-mpv.command('af', 'add', 'loudnorm');
-mpv.command('af', 'add', 'pan=stereo|c0=0.5*c0+0.5*c1');
-```
+### `iina.event`
 
-### 3. Events (`iina.event`)
+- `event.on('iina.window-loaded', cb)` — good place to load the sidebar and register message handlers
+- `event.on('mpv.file-loaded', cb)` — fires when a new file is loaded; use to enumerate tracks and notify the sidebar
 
-```javascript
-const { event } = iina;
+### `iina.preferences`
 
-// File loaded
-event.on('mpv.file-loaded', () => {
-  console.log('File loaded, checking audio tracks...');
-  const tracks = core.audio.tracks;
-  updateUI(tracks);
-});
+- `preferences.get('key')` — read a stored preference
+- Preferences are bound to HTML inputs via `data-pref-key="name"` and `data-type="bool"` for checkboxes. IINA persists them automatically — no manual save handler needed.
 
-// Track changed
-event.on('mpv.track-list-change', () => {
-  // Audio track list changed
-});
+### `iina.menu`
 
-// Playback state
-event.on('mpv.pause', () => { });
-event.on('mpv-unpause', () => { });
-```
+- `menu.addItem(menu.item('Label', callback))` — add a menu item
 
-### 4. Sidebar UI (`iina.sidebar`)
+## The `lavfi-complex` approach (what actually worked)
 
-For user controls, display in sidebar:
+mpv's [`--lavfi-complex`](https://mpv.io/manual/stable/#options-lavfi-complex) option lets a single filter graph take input from multiple audio/video tracks. The key facts learned from the mpv manual:
 
-```javascript
-const { sidebar } = iina;
+- A label of the form `aidN` selects audio track N as input
+- A label named `ao` is connected to the audio output
+- Referencing `[aid1]` and `[aid2]` in the graph forces mpv to select and decode both tracks simultaneously — no extra flag is needed
+- It's set as a runtime property via `mpv.set('lavfi-complex', filter)`
 
-sidebar.loadFile('sidebar.html');
-sidebar.show();
+### What didn't work
 
-// Communication between plugin and sidebar
-sidebar.onMessage('set-volume', (data) => {
-  core.audio.volume = data.volume;
-});
+Several filter graphs were tried before finding one that produced clean output:
 
-sidebar.postMessage('track-update', { tracks: core.audio.tracks });
-```
+| Attempt | Filter | Result |
+|---|---|---|
+| pan to stereo + amix | `[aid1]pan=stereo\|c0=c0\|c1=0[left];[aid2]pan=stereo\|c0=0\|c1=c0[right];[left][right]amix=inputs=2:normalize=0[ao]` | Sound thin / "background" — amix downmixes stereo inputs |
+| pan to mono + amerge | `[aid1]pan=mono\|c0=c0[left];[aid2]pan=mono\|c0=c0[right];[left][right]amerge=inputs=2[ao]` | Same thin-sound issue |
+| **aformat=mono + amerge** ✅ | `[aid1]aformat=channel_layouts=mono[mono1];[aid2]aformat=channel_layouts=mono[mono2];[mono1][mono2]amerge=inputs=2[ao]` | Clean stereo, track1→left, track2→right |
 
-### 5. Video Overlay (`iina.overlay`)
+The winning trick: force each track to mono with `aformat=channel_layouts=mono` *before* `amerge`. Without this, `amerge` interleaves the input channels of two stereo streams into a 4-channel layout that gets downmixed, causing the volume loss.
 
-For on-screen display during playback:
+### Track selection interaction
 
-```javascript
-const { overlay } = iina;
+- Setting `lavfi-complex` while a normal `aid` is selected causes mpv to rewrite the graph (e.g. `[aid1]` may silently become `[aid2]`) — the filter labels and `aid` fight for control.
+- Fix: set `mpv.set('aid', 'no')` before applying the filter, so `lavfi-complex` owns track selection entirely.
+- When turning bilingual off: clear the filter with `mpv.set('lavfi-complex', '')` and restore `mpv.set('aid', trackId)`.
 
-// Simple mode for basic content
-overlay.simpleMode();
-overlay.setContent('<div class="bilingual-info">🇺🇸 English | 🇪🇸 Spanish</div>');
-overlay.setStyle('.bilingual-info { color: white; font-size: 16px; }');
-overlay.show();
-```
+### Runtime vs at-load
 
-## MPV Audio Filters (Key for Bilingual)
+Setting `lavfi-complex` at runtime works without reloading the file or seeking — the new filter graph takes effect immediately. (Earlier versions tried `loadfile`, `seek` to current position, and pause/resume cycles — all unnecessary and some crashed IINA.)
 
-MPV supports FFmpeg audio filters via `--af` option. These can be applied dynamically:
+## Sidebar UI conventions (from the official opensub plugin)
 
-### Common Audio Filters
+The IINA-bundled opensub plugin (`iina/plugin-opensub`) is the best reference for sidebar styling:
 
-```bash
-# Volume control
---af=volume=2.0
+- `color-scheme: light dark` on `:root` for native dark mode
+- `body { background: none; }` so IINA's window background shows through
+- System font stack: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, ...`
+- CSS variables (`--highlight-color`, `--text-secondary`, `--input-border`) with `@media (prefers-color-scheme: dark)` overrides
+- 13px base font size
 
-# Normalization
---af=loudnorm=I=-16:LRA=11:TP=-1.5
-
-# Channel mixing (stereo to mono, etc.)
---af=pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1
-
-# Audio delay
---af=adelay=500ms  # delay by 500ms
-
-# Speed change (for pitch adjustment)
---af=atempo=0.9  # slow down to 90%
-```
-
-### For Bilingual Audio
-
-MPV doesn't natively support mixing multiple audio tracks, but we can use workarounds:
-
-**Approach 1: External Track + Filter**
-```javascript
-// Load secondary audio track
-await core.audio.loadTrack('/path/to/second_audio.m4a');
-
-// Switch between tracks (not mixing)
-core.audio.id = primaryTrackId;
-```
-
-**Approach 2: Pre-process with FFmpeg**
-Since MPV/FFmpeg can only play one audio stream at a time within a single player, we need to use external tracks and switching.
-
-## Implementation Options
-
-### Option A: Track Switching Plugin
-
-Simple approach - switch between audio tracks:
-
-```javascript
-// main.js
-const { core, event, sidebar, console } = iina;
-
-let audioTracks = [];
-let currentTrack = 0;
-
-event.on('mpv.file-loaded', () => {
-  audioTracks = core.audio.tracks;
-  if (audioTracks.length > 1) {
-    sidebar.loadFile('sidebar.html');
-    sidebar.postMessage('tracks-loaded', { tracks: audioTracks });
-    sidebar.show();
-  }
-});
-
-sidebar.onMessage('switch-track', (data) => {
-  core.audio.id = data.trackId;
-  core.osd(`Switched to ${data.trackName}`);
-});
-```
-
-**Pros:** Simple, fast, works with existing files
-**Cons:** Can't mix/blend tracks simultaneously
-
-### Option B: External Audio Mixing
-
-Load external audio file and sync with video:
-
-```javascript
-// main.js
-const { core, event, sidebar, console, mpv } = iina;
-
-let externalAudio = null;
-let mixedVolume = { primary: 1.0, secondary: 0.3 };
-
-event.on('mpv.file-loaded', async () => {
-  // User can load external audio file
-  // We'll keep track of it and sync
-});
-
-function loadExternalAudio(path) {
-  // MPV can load external audio files
-  // They will be synchronized with video automatically
-  core.audio.loadTrack(path);
-  externalAudio = path;
-  
-  // Use af filter to adjust volume
-  mpv.command('af', 'add', `volume=${mixedVolume.secondary}`);
-}
-```
-
-**Pros:** Can have multiple audio sources
-**Cons:** Limited mixing control within mpv
-
-### Option C: Dual Track Mixing via lavfi
-
-Use FFmpeg's lavfi filter to mix tracks:
-
-```javascript
-// Advanced: Use mpv's ability to add audio filters
-// This requires understanding mpv's filter chain
-
-// The --lavfi-complex option allows mixing multiple audio streams
-// But this needs to be set before playback starts
-
-// In practice, this approach requires preprocessing or using
-// mpv's script-binding features with custom audio routing
-```
-
-### Option D: Sidecar Player Approach (Recommended)
-
-Use IINA's plugin to control an external audio mixer:
-
-```javascript
-// main.js - Controls playback and UI
-// The plugin acts as controller, actual mixing happens via Web Audio API
-// in a separate webview
-
-const { core, event, overlay, sidebar, preferences } = iina;
-
-class BilingualAudioPlugin {
-  constructor() {
-    this.mode = 'primary'; // 'primary', 'secondary', 'mixed'
-    this.volumePrimary = 1.0;
-    this.volumeSecondary = 0.5;
-  }
-  
-  async loadFile(path) {
-    // Load video
-    await core.open(path);
-    
-    // Get audio track info
-    const tracks = core.audio.tracks;
-    
-    // If multiple audio tracks, offer mixing options
-    if (tracks.length > 1) {
-      this.showAudioMixerUI(tracks);
-    }
-  }
-  
-  showAudioMixerUI(tracks) {
-    // Show overlay with controls
-    overlay.simpleMode();
-    overlay.setStyle(`
-      .audio-controller {
-        position: absolute;
-        bottom: 60px;
-        right: 20px;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        font-family: system-ui;
-      }
-      .track-btn { margin: 5px; padding: 8px 16px; cursor: pointer; }
-      .track-btn.active { background: #007aff; }
-    `);
-    
-    this.updateOverlayContent();
-    overlay.setClickable(true);
-    overlay.show();
-  }
-  
-  updateOverlayContent() {
-    overlay.setContent(`
-      <div class="audio-controller" data-clickable>
-        <h3 style="margin: 0 0 10px 0;">Bilingual Audio</h3>
-        <div data-clickable>
-          <button class="track-btn ${this.mode === 'primary' ? 'active' : ''}" 
-                  onclick="iina.postMessage('set-mode', 'primary')">
-            🇺🇸 Primary
-          </button>
-          <button class="track-btn ${this.mode === 'secondary' ? 'active' : ''}"
-                  onclick="iina.postMessage('set-mode', 'secondary')">
-            🇪🇸 Secondary
-          </button>
-          <button class="track-btn ${this.mode === 'mixed' ? 'active' : ''}"
-                  onclick="iina.postMessage('set-mode', 'mixed')">
-            🎧 Mixed
-          </button>
-        </div>
-        ${this.mode === 'mixed' ? `
-          <div style="margin-top: 10px;">
-            <label>Primary: ${Math.round(this.volumePrimary * 100)}%</label>
-            <input type="range" min="0" max="100" value="${this.volumePrimary * 100}"
-                   onchange="iina.postMessage('set-volume', { track: 'primary', value: this.value / 100 })"
-                   data-clickable>
-            <label>Secondary: ${Math.round(this.volumeSecondary * 100)}%</label>
-            <input type="range" min="0" max="100" value="${this.volumeSecondary * 100}"
-                   onchange="iina.postMessage('set-volume', { track: 'secondary', value: this.value / 100 })"
-                   data-clickable>
-          </div>
-        ` : ''}
-      </div>
-    `);
-  }
-}
-
-const plugin = new BilingualAudioPlugin();
-
-// Handle messages from overlay
-overlay.onMessage('set-mode', (data) => {
-  plugin.mode = data;
-  plugin.updateOverlayContent();
-  
-  if (data === 'primary') {
-    core.audio.id = core.audio.tracks[0].id;
-  } else if (data === 'secondary' && core.audio.tracks.length > 1) {
-    core.audio.id = core.audio.tracks[1].id;
-  }
-  // 'mixed' mode would require external audio processing
-});
-
-overlay.onMessage('set-volume', (data) => {
-  if (data.track === 'primary') {
-    plugin.volumePrimary = data.value;
-  } else {
-    plugin.volumeSecondary = data.value;
-  }
-});
-
-// Initialize when file loads
-event.on('mpv.file-loaded', () => {
-  const tracks = core.audio.tracks;
-  console.log('Audio tracks:', tracks);
-  
-  if (tracks.length > 1) {
-    plugin.mode = 'primary';
-    plugin.showAudioMixerUI(tracks);
-  }
-});
-```
-
-## Plugin Implementation Plan
-
-### Phase 1: Basic Track Switching
-1. Create plugin structure with `Info.json`
-2. Implement audio track detection
-3. Add sidebar UI for track selection
-4. Add keyboard shortcuts for quick switching
-
-### Phase 2: Volume Control per Track
-1. Store volume preferences per track
-2. Add per-track volume sliders
-3. Smooth transitions when switching
-
-### Phase 3: Mixed Mode (Advanced)
-1. Detect when video has multiple audio tracks
-2. Allow loading external audio file
-3. Attempt sync with secondary track
-4. Simple volume mixing between tracks
-
-### Phase 4: Preferences & Presets
-1. Add preferences UI
-2. Save user's preferred language
-3. Auto-select language based on video filename/metadata
-4. Create presets for different content types
-
-## Limitations
-
-1. **MPV Architecture**: MPV can only play one audio stream at a time internally
-2. **Real Mixing**: True real-time audio mixing (like Web Audio API) is not possible
-3. **External Audio**: Loading external audio requires files to be properly synced
-4. **Performance**: Audio filter chains can add latency
-
-## Recommended Approach
-
-For a practical IINA plugin:
-
-1. **Track Switching** (Easy) - Switch between available audio tracks
-2. **Track Loading** (Medium) - Load external audio files
-3. **OSD/Sidebar UI** (Easy) - Show controls for track selection
-4. **Preferences** (Easy) - Remember user's preferred track for language
-
-For true bilingual mixing, the best approach is:
-- Pre-process files using FFmpeg (as documented in other files)
-- Use the IINA plugin for easy track switching and preference management
-
-## Example Plugin Code
-
-```javascript
-// main.js - Bilingual Audio Plugin for IINA
-
-const { core, event, overlay, sidebar, preferences, console, utils } = iina;
-
-class BilingualAudio {
-  constructor() {
-    this.tracks = [];
-    this.primaryLang = preferences.get('primaryLang') || 'en';
-    this.secondaryLang = preferences.get('secondaryLang') || 'es';
-    this.osdTimeout = null;
-  }
-  
-  showTrackSelector() {
-    if (this.tracks.length <= 1) {
-      core.osd('Only one audio track available');
-      return;
-    }
-    
-    overlay.simpleMode();
-    overlay.setStyle(`
-      .container {
-        position: absolute;
-        bottom: 80px;
-        right: 20px;
-        background: rgba(0,0,0,0.85);
-        color: white;
-        padding: 15px;
-        border-radius: 10px;
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-        font-size: 14px;
-      }
-      .title { font-weight: 600; margin-bottom: 10px; }
-      .track { 
-        padding: 8px 12px;
-        margin: 4px 0;
-        background: rgba(255,255,255,0.1);
-        border-radius: 6px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-      }
-      .track:hover { background: rgba(255,255,255,0.2); }
-      .track.active { background: #007aff; }
-      .lang { opacity: 0.7; font-size: 12px; }
-    `);
-    
-    let content = '<div class="container" data-clickable><div class="title">Audio Tracks</div>';
-    
-    this.tracks.forEach(track => {
-      const active = track.id === core.audio.id ? 'active' : '';
-      content += `
-        <div class="track ${active}" data-clickable 
-             onclick="iina.postMessage('select-track', ${track.id})">
-          <span>${track.title || 'Track ' + track.id}</span>
-          <span class="lang">${track.lang || ''}</span>
-        </div>
-      `;
-    });
-    
-    content += '</div>';
-    overlay.setContent(content);
-    overlay.setClickable(true);
-    overlay.show();
-    
-    // Auto-hide after 5 seconds
-    if (this.osdTimeout) clearTimeout(this.osdTimeout);
-    this.osdTimeout = setTimeout(() => overlay.hide(), 5000);
-  }
-  
-  selectTrack(trackId) {
-    core.audio.id = trackId;
-    const track = this.tracks.find(t => t.id === trackId);
-    core.osd(`Audio: ${track?.title || 'Track ' + trackId}`);
-    overlay.hide();
-  }
-}
-
-const bilingual = new BilingualAudio();
-
-// Event handlers
-event.on('mpv.file-loaded', () => {
-  bilingual.tracks = core.audio.tracks;
-  console.log('File loaded, audio tracks:', bilingual.tracks);
-});
-
-overlay.onMessage('select-track', (trackId) => {
-  bilingual.selectTrack(trackId);
-});
-
-// Keyboard shortcut
-iina.mpv.command('script-binding', 'bilingual-audio/show-selector');
-
-// Add menu item
-iina.menu.addItem({
-  title: 'Audio Tracks',
-  action: () => bilingual.showTrackSelector()
-});
-```
-
-## Files Structure for Plugin
-
-```
-BilingualAudio.iinaplugin/
-├── Info.json
-├── main.js
-├── preferences.html
-└── assets/
-    └── icons/
-        ├── en.svg
-        └── es.svg
-```
-
-## Installation
-
-Users can install the plugin by:
-1. Opening the `.iinaplgz` file with IINA
-2. Installing from GitHub repository URL
-3. Manually placing `.iinaplugin` folder in `~/Library/Application Support/com.colliderli.iina/plugins/`
+For preferences pages, the `iina/plugin-online-media` `pref.html` is the reference:
+- Inputs use `data-pref-key="name"` for string values
+- Checkboxes add `data-type="bool"`
+- No styles, no save button — IINA persists automatically
 
 ## Resources
 
 - [IINA Plugin API Documentation](https://docs.iina.io/)
-- [MPV Manual - Audio Filters](https://mpv.io/manual/master/#audio-filters)
-- [FFmpeg Audio Filters Documentation](https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters)
-
-## Related Files
-
-- [[Bilingual Audio Mixer for Local MKV Files]] - Pre-processing approach
-- [[Bilingual Audio Streaming with Web Audio API]] - Web implementation
-- [[Project Summary and Implementation Notes]] - Overall project summary
+- [mpv Manual — lavfi-complex](https://mpv.io/manual/stable/#options-lavfi-complex)
+- [FFmpeg Audio Filters](https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters)
+- [IINA opensub plugin source](https://github.com/iina/plugin-opensub)
+- [IINA online-media plugin source](https://github.com/iina/plugin-online-media)
