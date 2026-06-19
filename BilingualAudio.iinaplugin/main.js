@@ -214,6 +214,16 @@ event.on('iina.window-loaded', () => {
       sidebar.postMessage('mix-result', { success: false, message: 'Error: ' + e });
     }
   });
+
+  sidebar.onMessage('sidebar-ready', () => {
+    if (currentTracks.length > 0) {
+      sidebar.postMessage('tracks-loaded', { tracks: currentTracks });
+      const saved = loadSelection(mpv.getString('path'));
+      if (saved) {
+        sidebar.postMessage('selection-restored', saved);
+      }
+    }
+  });
 });
 
 function getAudioTracks() {

@@ -3,19 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <style>
+    :root { color-scheme: light dark; }
     * { box-sizing: border-box; }
     html { margin: 0; padding: 0; }
     body {
-      padding: 16px;
       margin: 0;
+      padding: 16px;
       font-size: 13px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1f2023;
+      background: none;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { color: #dadada; }
     }
     p { margin: 0; }
-    small, .small { font-size: 11px; }
-    .secondary { color: rgba(0, 0, 0, 0.5); }
+    .small { font-size: 11px; color: rgba(127, 127, 127, 1); }
     .section { margin-bottom: 12px; }
     .disabled { opacity: 0.4; pointer-events: none; }
+    select { width: 100%; margin-top: 2px; }
+    input[type="range"] { width: 100%; }
+    button { margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -24,19 +32,19 @@
       <input type="checkbox" id="bilingualToggle" />
       Bilingual mode
     </label>
-    <p class="small secondary">Send one audio track to the left channel and another to the right.</p>
+    <p class="small">Send one audio track to the left channel and another to the right.</p>
   </div>
 
   <div class="section disabled" id="channelSection">
-    <p>Left channel:</p>
-    <select id="leftSelect" style="width: 100%; margin-top: 2px"></select>
-    <p style="margin-top: 8px">Right channel:</p>
-    <select id="rightSelect" style="width: 100%; margin-top: 2px"></select>
-    <button type="button" id="swapBtn" style="width: 100%; margin-top: 8px; padding: 4px 8px;">Swap left/right</button>
+    <p>Left channel</p>
+    <select id="leftSelect"></select>
+    <p style="margin-top: 8px">Right channel</p>
+    <select id="rightSelect"></select>
+    <button type="button" id="swapBtn">Swap left/right</button>
     <p style="margin-top: 12px;">Left volume: <span id="vol1Label">100%</span></p>
-    <input type="range" id="vol1Slider" min="0" max="100" value="100" style="width: 100%; margin-top: 2px;">
+    <input type="range" id="vol1Slider" min="0" max="100" value="100">
     <p style="margin-top: 8px;">Right volume: <span id="vol2Label">100%</span></p>
-    <input type="range" id="vol2Slider" min="0" max="100" value="100" style="width: 100%; margin-top: 2px;">
+    <input type="range" id="vol2Slider" min="0" max="100" value="100">
   </div>
 
   <script>
@@ -122,6 +130,10 @@
     if (iina && iina.onMessage) {
       iina.onMessage('tracks-loaded', (data) => populateTracks(data.tracks));
       iina.onMessage('selection-restored', (data) => restoreSelection(data));
+    }
+
+    if (iina && iina.postMessage) {
+      iina.postMessage('sidebar-ready', {});
     }
   </script>
 </body>
