@@ -76,15 +76,29 @@ function enableBilingual(t1, t2, vol1, vol2) {
   if (savedAid === null) {
     savedAid = mpv.getString('aid');
   }
-  mpv.set('aid', 'no');
-  mpv.set('lavfi-complex', buildBilingualFilter(t1, t2, vol1, vol2));
+  const pos = mpv.getNumber('time-pos');
+  const path = mpv.getString('path');
+  const midPlayback = Number.isFinite(pos) && pos > 0 && path && !reloading;
+
   currentLeftId = t1;
   currentRightId = t2;
   currentVol1 = vol1;
   currentVol2 = vol2;
   bilingualOn = true;
+
+  if (midPlayback) {
+    reloading = true;
+    pendingSeek = pos;
+    mpv.command('loadfile', [path, 'replace']);
+  } else {
+    mpv.set('lavfi-complex', buildBilingualFilter(t1, t2, vol1, vol2));
+    mpv.set('aid', 'no');
+  }
   refreshMenu();
 }
+
+let pendingSeek = null;
+let reloading = false;
 
 // --- Menu ---
 
@@ -244,7 +258,7 @@ mpv.addHook('on_load', 50, (next) => {
   try {
     const path = mpv.getString('path');
     const saved = loadSelection(path);
-    console.log('on_load hook: path=' + path + ' saved=' + JSON.stringify(saved));
+    console.log('on_load hook: path=' + path + ' saved=' + JSON.stringify(saved) + ' reloading=' + reloading);
     if (saved && saved.enabled && saved.leftId !== undefined && saved.rightId !== undefined) {
       currentLeftId = saved.leftId;
       currentRightId = saved.rightId;
@@ -253,16 +267,26 @@ mpv.addHook('on_load', 50, (next) => {
       if (saved.savedAid !== undefined) {
         savedAid = saved.savedAid;
       }
-      enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+      // Apply filter directly (not via enableBilingual, which would reload)
+      mpv.set('lavfi-complex', buildBilingualFilter(currentLeftId, currentRightId, currentVol1, currentVol2));
+      mpv.set('aid', 'no');
+      bilingualOn = true;
       console.log('on_load: bilingual enabled in hook');
     }
   } catch (e) {
     console.log('on_load hook error:', e);
   }
+  reloading = false;
   next();
 });
 
 event.on('mpv.file-loaded', () => {
+  reloading = false;
+  if (pendingSeek !== null) {
+    const seekTo = pendingSeek;
+    pendingSeek = null;
+    try { mpv.command('seek', [String(seekTo), 'absolute', 'exact']); } catch (e) {}
+  }
   const audioTracks = getAudioTracks();
   currentTracks = audioTracks;
   if (audioTracks.length > 1) {
@@ -272,7 +296,7 @@ event.on('mpv.file-loaded', () => {
     const saved = loadSelection(mpv.getString('path'));
     if (saved) {
       sidebar.postMessage('selection-restored', saved);
-      if (saved.enabled && !bilingualOn) {
+      if (saved.enabled && !bilingualOn && !reloading) {
         if (saved.savedAid !== undefined) {
           savedAid = saved.savedAid;
         }
