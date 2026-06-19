@@ -19,6 +19,8 @@ Persist the chosen left/right track IDs so reopening the same file restores the 
 - Key by file path or content hash
 - Store in `iina.preferences` (only supports flat keys) or a JSON sidecar via `iina.file`
 
+**Done** — stored in `@data/selections.json` keyed by `mpv` `path`, restored on `mpv.file-loaded` and re-applied if bilingual was on.
+
 ## Medium priority
 
 ### Keyboard shortcut to toggle bilingual
@@ -34,6 +36,14 @@ Allow loading an external audio file (e.g. a separate `.m4a`) as one of the two 
 
 - Use `mpv.command('audio-add', [path, 'auto'])` to load the external track
 - Reference its `aidN` in the lavfi-complex graph
+
+### Swap left/right button
+
+Add a button (e.g. ⇄) between the two dropdowns that swaps the left and right channel selections in one click.
+
+- Add a small button in `sidebar.html` between `leftSelect` and `rightSelect`
+- On click, exchange the `value` of the two selects and call `apply()`
+- Keeps the existing change-listener path; no new `iina.postMessage` needed
 
 ### Per-channel volume balance
 

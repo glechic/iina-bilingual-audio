@@ -36,6 +36,7 @@
 
   <script>
     let tracks = [];
+    let suppressApply = false;
 
     function populateTracks(list) {
       tracks = list || [];
@@ -56,6 +57,7 @@
     }
 
     function apply() {
+      if (suppressApply) return;
       const on = document.getElementById('bilingualToggle').checked;
       const t1 = document.getElementById('leftSelect').value;
       const t2 = document.getElementById('rightSelect').value;
@@ -69,13 +71,24 @@
       }
     }
 
+    function restoreSelection(state) {
+      suppressApply = true;
+      if (state.leftId !== undefined && state.rightId !== undefined) {
+        document.getElementById('leftSelect').value = state.leftId;
+        document.getElementById('rightSelect').value = state.rightId;
+      }
+      document.getElementById('bilingualToggle').checked = !!state.enabled;
+      document.getElementById('channelSection').classList.toggle('disabled', !state.enabled);
+      suppressApply = false;
+    }
+
     document.getElementById('bilingualToggle').addEventListener('change', apply);
     document.getElementById('leftSelect').addEventListener('change', apply);
     document.getElementById('rightSelect').addEventListener('change', apply);
 
     if (iina && iina.onMessage) {
       iina.onMessage('tracks-loaded', (data) => populateTracks(data.tracks));
-      iina.onMessage('mix-result', (data) => {});
+      iina.onMessage('selection-restored', (data) => restoreSelection(data));
     }
   </script>
 </body>
