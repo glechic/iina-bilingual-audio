@@ -64,6 +64,24 @@ ffmpeg -i input.mkv -filter_complex \
   -map 0:v -map "[aout]" -c:v copy output.mkv
 ```
 
+## Bugs
+
+### Bilingual toggle leaves original audio track disabled after turning off
+When bilingual mode is enabled, the plugin sets `mpv.set('aid', 'no')` so `lavfi-complex` can own track selection. When toggled off, it restores `aid` to `data.track1Id` — but if the user had a *different* track selected in IINA's native audio picker before enabling bilingual, that original selection is lost. IINA's audio picker also shows as "off" while bilingual is active, which is expected, but the off-path doesn't restore the user's pre-bilingual selection.
+
+**Fix:** capture `mpv.getString('aid')` *before* setting `aid=no`, and restore that value (not `data.track1Id`) on toggle off.
+
+### Bilingual mode silently fails when left and right track are the same
+The filter graph `[aid1]...[aid1]...` (same track on both channels) produces no audio because the `aid1` label can only be used once in a `lavfi-complex` graph. If the user picks the same track for both dropdowns, the plugin sets the filter without warning and the audio goes silent.
+
+**Fix:** either (a) detect same-track selection and use `asplit` to fan out one input into two branches, or (b) disable the right dropdown's value matching the left dropdown, or (c) show a warning and refuse to apply. Option (a) keeps it functional:
+```
+[aid1]asplit[a][b];
+[a]aformat=channel_layouts=mono[m1];
+[b]aformat=channel_layouts=mono[m2];
+[m1][m2]amerge=inputs=2[ao]
+```
+
 ## Completed
 
 ### v1.0 — Working prototype

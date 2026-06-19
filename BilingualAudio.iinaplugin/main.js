@@ -7,17 +7,31 @@ menu.addItem(
 );
 
 function buildBilingualFilter(t1, t2) {
+  if (t1 === t2) {
+    return '[aid' + t1 + ']asplit[a][b];' +
+           '[a]aformat=channel_layouts=mono[mono1];' +
+           '[b]aformat=channel_layouts=mono[mono2];' +
+           '[mono1][mono2]amerge=inputs=2[ao]';
+  }
   return '[aid' + t1 + ']aformat=channel_layouts=mono[mono1];' +
          '[aid' + t2 + ']aformat=channel_layouts=mono[mono2];' +
          '[mono1][mono2]amerge=inputs=2[ao]';
 }
 
-function disableBilingual(trackId) {
+let savedAid = null;
+
+function disableBilingual() {
   mpv.set('lavfi-complex', '');
-  mpv.set('aid', trackId);
+  if (savedAid !== null) {
+    mpv.set('aid', savedAid);
+    savedAid = null;
+  }
 }
 
 function enableBilingual(t1, t2) {
+  if (savedAid === null) {
+    savedAid = mpv.getString('aid');
+  }
   mpv.set('aid', 'no');
   mpv.set('lavfi-complex', buildBilingualFilter(t1, t2));
 }
@@ -31,7 +45,7 @@ event.on('iina.window-loaded', () => {
         enableBilingual(data.track1Id, data.track2Id);
         sidebar.postMessage('mix-result', { success: true, message: 'Bilingual on' });
       } else {
-        disableBilingual(data.track1Id);
+        disableBilingual();
         sidebar.postMessage('mix-result', { success: true, message: 'Bilingual off' });
       }
     } catch (e) {
