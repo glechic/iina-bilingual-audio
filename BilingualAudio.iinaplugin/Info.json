@@ -7,7 +7,6 @@
     "email": "you@example.com"
   },
   "entry": "main.js",
-  "globalEntry": "global.js",
   "description": "Mix bilingual audio tracks with left/right channel separation or simultaneous playback",
   "sidebarTab": {
     "name": "Audio Mixer"

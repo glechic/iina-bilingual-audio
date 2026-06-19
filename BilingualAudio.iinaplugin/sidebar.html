@@ -13,23 +13,46 @@
     }
     h2 { font-size: 16px; margin-bottom: 15px; }
     h3 { font-size: 12px; margin: 15px 0 8px 0; color: #999; text-transform: uppercase; }
-    
-    .debug-box {
-      background: #1a1a1a;
-      border: 1px solid #333;
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #2a2a2a;
       border-radius: 6px;
-      padding: 12px;
       margin-bottom: 15px;
-      font-family: monospace;
-      font-size: 11px;
-      max-height: 250px;
-      overflow-y: auto;
     }
-    .debug-line { margin: 4px 0; }
-    .debug-line.error { color: #f44336; }
-    .debug-line.success { color: #4caf50; }
-    .debug-line.info { color: #2196f3; }
-    
+    .toggle-row span { font-size: 14px; font-weight: 600; }
+    .switch {
+      position: relative;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch .slider {
+      position: absolute;
+      inset: 0;
+      background: #555;
+      border-radius: 13px;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .switch .slider::before {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .switch input:checked + .slider { background: #007aff; }
+    .switch input:checked + .slider::before { transform: translateX(18px); }
+
     select {
       width: 100%;
       padding: 8px;
@@ -39,262 +62,108 @@
       border-radius: 4px;
       color: #fff;
     }
-    
-    .mode-option { display: flex; align-items: center; padding: 8px 0; }
-    .mode-option input { margin-right: 10px; }
-    
-    .volume-control { margin: 10px 0; }
-    .volume-control label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      margin-bottom: 4px;
-    }
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      -webkit-appearance: none;
-      background: rgba(255,255,255,0.2);
-      border-radius: 3px;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
-      background: #007aff;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    
-    .actions { display: flex; gap: 10px; margin-top: 20px; }
-    button {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    button.primary { background: #007aff; color: #fff; }
-    button.primary:hover { background: #0051d5; }
-    button.secondary { background: rgba(255,255,255,0.15); color: #fff; }
-    button.secondary:hover { background: rgba(255,255,255,0.25); }
-    
-    .hidden { display: none; }
-    
+
     .status-bar {
       background: #333;
       padding: 8px;
       border-radius: 4px;
-      margin-bottom: 10px;
+      margin-top: 15px;
       font-size: 12px;
       text-align: center;
     }
     .status-bar.working { background: #2e7d32; }
     .status-bar.error { background: #c62828; }
+
+    .disabled { opacity: 0.4; pointer-events: none; }
   </style>
 </head>
 <body>
-  <h2>Audio Mixer</h2>
-  
+  <h2>Bilingual Audio</h2>
+
+  <label class="toggle-row">
+    <span>Bilingual Mode</span>
+    <span class="switch">
+      <input type="checkbox" id="bilingualToggle">
+      <span class="slider"></span>
+    </span>
+  </label>
+
+  <div id="channelSection" class="disabled">
+    <h3>Left Channel</h3>
+    <select id="leftSelect"></select>
+
+    <h3>Right Channel</h3>
+    <select id="rightSelect"></select>
+  </div>
+
   <div class="status-bar" id="statusBar">Initializing...</div>
-  
-  <div class="debug-box" id="debugBox">
-    <div class="debug-line info">Starting...</div>
-  </div>
-  
-  <div id="trackSection">
-    <h3>Track Selection</h3>
-    <select id="track1Select"></select>
-    <select id="track2Select"></select>
-  </div>
-  
-  <h3>Mode</h3>
-  <div class="mode-option">
-    <input type="radio" name="mode" value="single" checked id="modeSingle">
-    <label for="modeSingle">Single Track</label>
-  </div>
-  <div class="mode-option">
-    <input type="radio" name="mode" value="stereo" id="modeStereo">
-    <label for="modeStereo">Stereo (Left/Right)</label>
-  </div>
-  <div class="mode-option">
-    <input type="radio" name="mode" value="mixed" id="modeMixed">
-    <label for="modeMixed">Mixed (Both)</label>
-  </div>
-  
-  <div id="volumeControls" class="hidden">
-    <h3>Volume</h3>
-    <div class="volume-control">
-      <label>
-        <span id="vol1Label">Track 1</span>
-        <span id="vol1Value">100%</span>
-      </label>
-      <input type="range" id="vol1Slider" min="0" max="100" value="100">
-    </div>
-    <div class="volume-control">
-      <label>
-        <span id="vol2Label">Track 2</span>
-        <span id="vol2Value">100%</span>
-      </label>
-      <input type="range" id="vol2Slider" min="0" max="100" value="100">
-    </div>
-  </div>
-  
-  <div class="actions">
-    <button class="primary" id="applyBtn">Apply</button>
-    <button class="secondary" id="testBtn">Test</button>
-  </div>
 
   <script>
     let tracks = [];
-    let currentMode = 'single';
-    let messageCount = 0;
-    
-    function debug(msg, type) {
-      const box = document.getElementById('debugBox');
-      const line = document.createElement('div');
-      line.className = 'debug-line ' + (type || 'info');
-      const time = new Date().toLocaleTimeString();
-      line.textContent = '[' + time + '] ' + msg;
-      box.appendChild(line);
-      box.scrollTop = box.scrollHeight;
-    }
-    
+
     function setStatus(msg, type) {
       const bar = document.getElementById('statusBar');
       bar.textContent = msg;
       bar.className = 'status-bar ' + (type || '');
     }
-    
-    debug('iina available: ' + (typeof iina !== 'undefined'));
-    if (typeof iina !== 'undefined') {
-      debug('iina.postMessage: ' + (typeof iina.postMessage !== 'undefined'));
-      debug('iina.onMessage: ' + (typeof iina.onMessage !== 'undefined'));
-      setStatus('API Ready', 'working');
-    } else {
-      setStatus('ERROR: iina not available', 'error');
+
+    function buildFilter(t1, t2) {
+      return '[aid' + t1 + ']pan=mono|c0=c0[left];' +
+             '[aid' + t2 + ']pan=mono|c0=c0[right];' +
+             '[left][right]amerge=inputs=2[ao]';
     }
-    
-    document.querySelectorAll('input[name="mode"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        currentMode = e.target.value;
-        debug('Mode: ' + currentMode);
-        
-        const volControls = document.getElementById('volumeControls');
-        if (currentMode === 'single') {
-          volControls.classList.add('hidden');
-        } else {
-          volControls.classList.remove('hidden');
-          if (currentMode === 'stereo') {
-            document.getElementById('vol1Label').textContent = 'Left Channel';
-            document.getElementById('vol2Label').textContent = 'Right Channel';
-          } else {
-            document.getElementById('vol1Label').textContent = 'Track 1';
-            document.getElementById('vol2Label').textContent = 'Track 2';
-          }
-        }
-      });
-    });
-    
-    document.getElementById('vol1Slider').addEventListener('input', (e) => {
-      document.getElementById('vol1Value').textContent = e.target.value + '%';
-    });
-    document.getElementById('vol2Slider').addEventListener('input', (e) => {
-      document.getElementById('vol2Value').textContent = e.target.value + '%';
-    });
-    
-    document.getElementById('testBtn').addEventListener('click', () => {
-      messageCount++;
-      debug('Test #' + messageCount + ' clicked');
-      
-      if (iina && iina.postMessage) {
-        const msg = {test: true, count: messageCount, time: Date.now()};
-        debug('Sending: ' + JSON.stringify(msg));
-        iina.postMessage('test-message', msg);
-        debug('Message sent', 'success');
-        setStatus('Test message sent', 'working');
-      } else {
-        debug('ERROR: iina.postMessage not available', 'error');
-        setStatus('ERROR: Cannot send', 'error');
+
+    function populateTracks(list) {
+      tracks = list || [];
+      const l = document.getElementById('leftSelect');
+      const r = document.getElementById('rightSelect');
+      l.innerHTML = '';
+      r.innerHTML = '';
+      if (tracks.length === 0) {
+        setStatus('No audio tracks', 'error');
+        return;
       }
-    });
-    
-    document.getElementById('applyBtn').addEventListener('click', () => {
-      const mode = currentMode;
-      const t1 = parseInt(document.getElementById('track1Select').value);
-      const t2 = parseInt(document.getElementById('track2Select').value);
-      const v1 = parseInt(document.getElementById('vol1Slider').value) / 100;
-      const v2 = parseInt(document.getElementById('vol2Slider').value) / 100;
-      
-      debug('Apply: mode=' + mode + ' t1=' + t1 + ' t2=' + t2, 'info');
-      
+      tracks.forEach((t, i) => {
+        const id = t.id !== undefined ? t.id : (i + 1);
+        const title = t.title || t.lang || ('Track ' + id);
+        const text = 'Track ' + id + ': ' + title;
+        l.add(new Option(text, id));
+        r.add(new Option(text, id));
+      });
+      if (tracks.length >= 1) l.value = tracks[0].id || 1;
+      if (tracks.length > 1) r.value = tracks[1].id || 2;
+      setStatus(tracks.length + ' tracks detected', 'working');
+    }
+
+    function apply() {
+      const on = document.getElementById('bilingualToggle').checked;
+      const t1 = document.getElementById('leftSelect').value;
+      const t2 = document.getElementById('rightSelect').value;
+      document.getElementById('channelSection').classList.toggle('disabled', !on);
       if (iina && iina.postMessage) {
         iina.postMessage('apply-mix', {
-          mode: mode,
-          track1Id: t1,
-          track2Id: t2,
-          vol1: v1,
-          vol2: v2
+          enabled: on,
+          track1Id: parseInt(t1),
+          track2Id: parseInt(t2)
         });
-        debug('Apply message sent', 'success');
-        setStatus('Applying ' + mode + ' mode...', 'working');
-      } else {
-        debug('ERROR: Cannot send', 'error');
-        setStatus('ERROR', 'error');
+        setStatus(on ? 'Applying bilingual...' : 'Bilingual off', on ? 'working' : '');
       }
-    });
-    
+    }
+
+    document.getElementById('bilingualToggle').addEventListener('change', apply);
+    document.getElementById('leftSelect').addEventListener('change', apply);
+    document.getElementById('rightSelect').addEventListener('change', apply);
+
     if (iina && iina.onMessage) {
       iina.onMessage('tracks-loaded', (data) => {
-        debug('Received tracks-loaded', 'success');
-        tracks = data.tracks || [];
-        debug('Count: ' + tracks.length);
-        
-        const s1 = document.getElementById('track1Select');
-        const s2 = document.getElementById('track2Select');
-        s1.innerHTML = '';
-        s2.innerHTML = '';
-        
-        if (tracks.length === 0) {
-          debug('ERROR: No tracks!', 'error');
-          s1.innerHTML = '<option>No tracks</option>';
-          s2.innerHTML = '<option>No tracks</option>';
-          return;
-        }
-        
-        tracks.forEach((t, i) => {
-          const id = t.id !== undefined ? t.id : (i + 1);
-          const title = t.title || t.lang || 'Track ' + id;
-          const text = 'Track ' + id + ': ' + title;
-          
-          const opt1 = document.createElement('option');
-          opt1.value = id;
-          opt1.textContent = text;
-          s1.appendChild(opt1);
-          
-          const opt2 = document.createElement('option');
-          opt2.value = id;
-          opt2.textContent = text;
-          s2.appendChild(opt2);
-        });
-        
-        if (tracks.length >= 1) s1.value = tracks[0].id || 1;
-        if (tracks.length > 1) s2.value = tracks[1].id || 2;
-        
-        debug('Selectors populated', 'success');
-        setStatus('Ready - ' + tracks.length + ' tracks', 'working');
+        populateTracks(data.tracks);
       });
-      
       iina.onMessage('mix-result', (data) => {
-        debug('Result: ' + data.message, data.success ? 'success' : 'error');
         setStatus(data.message, data.success ? 'working' : 'error');
       });
     }
-    
-    debug('Sidebar initialized', 'success');
-    setStatus('Ready');
+
+    setStatus('Waiting for tracks...');
   </script>
 </body>
 </html>
