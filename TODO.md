@@ -4,15 +4,19 @@ Proposed features and improvements. The current plugin is intentionally minimal 
 
 ## High priority
 
-### Auto-select tracks by language
-
-When a file loads, auto-pick the left/right channels based on user-configured preferred languages instead of defaulting to track 1 and track 2.
-
-- Add `primary_lang` and `secondary_lang` text preferences (e.g. `en`, `ru`)
-- On `mpv.file-loaded`, match `track.lang` against the preferences
-- Fall back to track order if no match
-
 ## Medium priority
+
+### Improve sidebar UI
+
+The sidebar is functional but minimal: hardcoded inline styles, no grouped sections, no feedback after toggling, and controls are stacked without hierarchy. Tighten the layout so it's easier to scan.
+
+- Group controls into labeled sections (Toggle, Channels, Volumes) with subtle headings
+- Move inline styles in `sidebar.html` to a real stylesheet block (still inline for plugin simplicity, but consistent)
+- Show a small status line under the toggle ("Bilingual on / off, applied to file.mkv") using the `mix-result` message already posted by `main.js`
+- Add a disabled-state hint when there are fewer than 2 audio tracks ("This file has only one audio track")
+- Make the swap button visually paired with the two selects (e.g. between them, icon-only `⇄`)
+- Keep the volume sliders compact (smaller labels, percent only on focus/hover) so the sidebar doesn't grow tall
+- Ensure sliders/swap/selects are `disabled` (not just dimmed via `.disabled`) when bilingual is off, so they don't accumulate state on a non-bilingual file
 
 ### Keyboard shortcut to toggle bilingual
 
@@ -36,13 +40,6 @@ Surface external audio tracks (loaded via `audio-add` or demuxer attachments) in
 - Label them distinctly (e.g. `Track N (external): name.ext`) so users can tell them apart from embedded tracks
 - Handle the external track being removed mid-session (rebuild dropdowns on `track-list` change if an event is available; otherwise on a manual refresh / menu entry)
 - Validate the external track has a stable `id` before referencing it in the `lavfi-complex` graph
-
-### Per-channel volume balance
-
-Add a single balance slider (left ↔ right) rather than two independent volume controls. Keeps the UI minimal while letting users emphasize one language.
-
-- Implement via `[mono1]volume=V1[mono1v];[mono2]volume=V2[mono2v]` before `amerge`
-- Slider maps position to `V1`/`V2` with `V1 + V2 = 1`
 
 ### System theme support (dark mode)
 
@@ -81,6 +78,31 @@ ffmpeg -i input.mkv -filter_complex \
   -map 0:v -map "[aout]" -c:v copy output.mkv
 ```
 
+
+## Bugs
+
+### setTimeout on file-loaded delays restored bilingual audio by 1s
+
+`mpv.file-loaded` uses `setTimeout(..., 1000)` before reading `core.audio.tracks` / `track-list` and applying a saved bilingual selection. When a saved selection exists for the file being opened, playback starts, nothing comes out of the speakers, and the audio only appears once the timeout fires and the `lavfi-complex` filter is installed. The 1s silence at the start of every reopened file is jarring.
+
+**Fix:** drop the `setTimeout` and either
+- wait on a proper "tracks are ready" signal from `core.audio.tracks` / an mpv property change (`track-list` updates after demux) instead of a fixed delay, or
+- if a hard delay is unavoidable for the very first frame, apply the filter inside the same tick the tracks become available so the player never starts without the bilingual graph in place.
+
+Verify by opening a file with a saved bilingual selection: audio should be present from frame one with no perceptible gap.
+
+## Publishing
+
+### Package the plugin for distribution
+
+The current artifact is a checked-in `BilingualAudio.iinaplugin/` folder that users copy by hand to `~/Library/Application Support/com.colliderli.iina/plugins/`. Add a real packaging/release flow.
+
+- Add a build script (npm `prepare` / `prepack` is fine since `package.json` already exists) that zips the contents of `BilingualAudio.iinaplugin/` into `BilingualAudio.iinaplugin-VERSION.zip` (the layout IINA expects)
+- Bump `Info.json`'s `version` field per release and keep a `CHANGELOG.md`
+- Add a `scripts/pack.js` (or `scripts/pack.sh`) so the zip can also be produced outside npm (`node scripts/pack.js`)
+- Document install steps in `README.md`: download the zip, extract into the IINA plugins folder, restart IINA
+- Note IINA does not have a central plugin registry today, so distribution is via GitHub Releases — attach the zip as a release asset and link from the README
+- Optional: a GitHub Actions workflow that on tag push builds the zip and attaches it to the GitHub Release
 
 ## Completed
 
