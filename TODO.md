@@ -52,6 +52,8 @@ Sidebar currently hardcodes light colors (`rgba(0, 0, 0, 0.5)`). Adopt IINA's na
 - Provide `@media (prefers-color-scheme: dark)` overrides (see the opensub plugin reference in `IINA Plugin Investigation.md`)
 - Apply the same variables to `preferences.html`
 
+**Done** — sidebar now uses `color-scheme: light dark`, CSS variables for all colors, and `@media (prefers-color-scheme: dark)` overrides. Selects, buttons, and range sliders all themed for both light and dark.
+
 ### Expand menu integration
 
 Only a single "Show Audio Mixer" menu item exists today. Add more menu entries so common actions are reachable without opening the sidebar.
@@ -90,6 +92,29 @@ ffmpeg -i input.mkv -filter_complex \
 `mpv.file-loaded` used `setTimeout(..., 1000)` before reading tracks and applying a saved bilingual selection, causing a 1-second silence gap at the start of every reopened file.
 
 **Fixed** — the saved selection is now applied via an `mpv.addHook('on_load', ...)` hook, which runs after the file is probed (tracks are known) but before audio output starts. The `mpv.file-loaded` handler now only updates the sidebar/menu; no timeout needed.
+
+### Changing audio track occasionally jumps playback forward 2-10 seconds
+
+After changing an audio track (via sidebar dropdown or menu), playback sometimes jumps forward by 2-10 seconds. Happens roughly 50% of the time. Likely caused by mpv reinitializing the audio chain when `lavfi-complex` is applied — the decoder seeks to the nearest keyframe or the audio buffer drains/refills asymmetrically.
+
+**Investigate:**
+- Check if the jump correlates with `lavfi-complex` being set (audio chain rebuild) vs. just `aid` switching
+- Try setting `lavfi-complex` before `aid` (or vice versa) to see if ordering matters
+- Consider pausing before applying the filter, then resuming — but pausing itself caused issues before
+- Check if `mpv.set('audio-pitch-correction', 'no')` or similar options reduce the seek
+- May be related to the `on_load` hook also setting the filter while `mpv.file-loaded` re-applies it — verify the filter isn't being set twice
+
+## Features
+
+### OSD notifications
+
+Show brief on-screen messages when bilingual mode is toggled or tracks change, so the user gets feedback even without looking at the sidebar.
+
+- Use `core.osd('Bilingual on')` / `core.osd('Bilingual off')` on toggle
+- Show track names in the message (e.g. "Left: English, Right: Russian")
+- Notify on swap ("Swapped: Left↔Right")
+- Keep messages short — IINA OSD auto-dismisses
+- Gate behind a preference (`show_notifications` checkbox in `preferences.html`)
 
 ## Publishing
 
