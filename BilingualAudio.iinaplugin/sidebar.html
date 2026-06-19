@@ -21,9 +21,24 @@
     .small { font-size: 11px; color: rgba(127, 127, 127, 1); }
     .section { margin-bottom: 12px; }
     .disabled { opacity: 0.4; pointer-events: none; }
-    select { width: 100%; margin-top: 2px; }
-    input[type="range"] { width: 100%; }
-    button { margin-top: 8px; }
+    .section-title { font-size: 12px; font-weight: 600; margin: 12px 0 2px; }
+    .vol-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .vol-row label { width: 50px; flex-shrink: 0; }
+    .vol-row input[type="range"] { flex: 1; }
+    .vol-row .vol-val { width: 36px; text-align: right; flex-shrink: 0; font-size: 11px; }
+    .swap-btn {
+      margin: 12px auto;
+      display: block;
+      padding: 4px 12px;
+      border: 1px solid rgba(127,127,127,0.3);
+      border-radius: 6px;
+      background: rgba(127,127,127,0.1);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      color: inherit;
+    }
+    .swap-btn:hover { background: rgba(127,127,127,0.18); }
   </style>
 </head>
 <body>
@@ -36,15 +51,23 @@
   </div>
 
   <div class="section disabled" id="channelSection">
-    <p>Left channel</p>
+    <p class="section-title" style="margin-top:0;">Left channel</p>
     <select id="leftSelect"></select>
-    <p style="margin-top: 8px">Right channel</p>
+    <div class="vol-row">
+      <label class="small">Volume</label>
+      <input type="range" id="vol1Slider" min="0" max="100" value="100">
+      <span class="vol-val" id="vol1Label">100%</span>
+    </div>
+
+    <button type="button" class="swap-btn" id="swapBtn">⇅</button>
+
+    <p class="section-title">Right channel</p>
     <select id="rightSelect"></select>
-    <button type="button" id="swapBtn">Swap left/right</button>
-    <p style="margin-top: 12px;">Left volume: <span id="vol1Label">100%</span></p>
-    <input type="range" id="vol1Slider" min="0" max="100" value="100">
-    <p style="margin-top: 8px;">Right volume: <span id="vol2Label">100%</span></p>
-    <input type="range" id="vol2Slider" min="0" max="100" value="100">
+    <div class="vol-row">
+      <label class="small">Volume</label>
+      <input type="range" id="vol2Slider" min="0" max="100" value="100">
+      <span class="vol-val" id="vol2Label">100%</span>
+    </div>
   </div>
 
   <script>
