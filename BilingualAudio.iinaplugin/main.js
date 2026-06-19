@@ -1,205 +1,251 @@
 const { core, mpv, sidebar, menu, event, preferences, file } = iina;
 
-console.log('Audio Mixer plugin loaded');
+// ─── State ──────────────────────────────────────────────────────────────────
 
-let currentTracks = [];
-let currentLeftId = null;
-let currentRightId = null;
-let currentVol1 = 1;
-let currentVol2 = 1;
-let bilingualOn = false;
+const state = {
+  tracks: [],
+  leftId: null,
+  rightId: null,
+  vol1: 1,
+  vol2: 1,
+  enabled: false,
+  savedAid: null,
+  reloading: false,
+  pendingSeek: null,
+};
+
+// ─── Persistence ────────────────────────────────────────────────────────────
 
 const SELECTIONS_FILE = '@data/selections.json';
 
-function readSelections() {
+function loadAll() {
   try {
-    if (!file.exists(SELECTIONS_FILE)) return {};
-    return JSON.parse(file.read(SELECTIONS_FILE) || '{}');
+    return file.exists(SELECTIONS_FILE) ? JSON.parse(file.read(SELECTIONS_FILE) || '{}') : {};
   } catch (e) {
     console.log('Failed reading selections:', e);
     return {};
   }
 }
 
-function writeSelections(map) {
-  try {
-    file.write(SELECTIONS_FILE, JSON.stringify(map));
-  } catch (e) {
-    console.log('Failed writing selections:', e);
-  }
-}
-
-function saveSelection(path, state) {
+function saveSelection(path, selection) {
   if (!path) return;
-  const map = readSelections();
-  map[path] = state;
-  writeSelections(map);
+  const all = loadAll();
+  all[path] = selection;
+  try { file.write(SELECTIONS_FILE, JSON.stringify(all)); }
+  catch (e) { console.log('Failed writing selections:', e); }
 }
 
 function loadSelection(path) {
-  if (!path) return null;
-  const map = readSelections();
-  return map[path] || null;
+  return path ? loadAll()[path] || null : null;
 }
 
-function buildBilingualFilter(t1, t2, vol1, vol2) {
-  const v1 = vol1;
-  const v2 = vol2;
-  const volL = '[mono1]volume=' + v1 + '[mono1v];';
-  const volR = '[mono2]volume=' + v2 + '[mono2v];';
+function persistCurrent() {
+  saveSelection(mpv.getString('path'), {
+    enabled: state.enabled,
+    leftId: state.leftId,
+    rightId: state.rightId,
+    vol1: state.vol1,
+    vol2: state.vol2,
+    savedAid: state.savedAid,
+  });
+}
+
+// ─── Filter ─────────────────────────────────────────────────────────────────
+
+function buildFilter(t1, t2, vol1, vol2) {
+  const volL = '[mono1]volume=' + vol1 + '[mono1v];';
+  const volR = '[mono2]volume=' + vol2 + '[mono2v];';
+  const merge = '[mono1v][mono2v]amerge=inputs=2[ao]';
   if (t1 === t2) {
     return '[aid' + t1 + ']asplit[a][b];' +
            '[a]aformat=channel_layouts=mono[mono1];' +
-           '[b]aformat=channel_layouts=mono[mono2];' +
-           volL + volR +
-           '[mono1v][mono2v]amerge=inputs=2[ao]';
+           '[b]aformat=channel_layouts=mono[mono2];' + volL + volR + merge;
   }
   return '[aid' + t1 + ']aformat=channel_layouts=mono[mono1];' +
-         '[aid' + t2 + ']aformat=channel_layouts=mono[mono2];' +
-         volL + volR +
-         '[mono1v][mono2v]amerge=inputs=2[ao]';
+         '[aid' + t2 + ']aformat=channel_layouts=mono[mono2];' + volL + volR + merge;
 }
 
-let savedAid = null;
+function applyFilter() {
+  mpv.set('lavfi-complex', buildFilter(state.leftId, state.rightId, state.vol1, state.vol2));
+  mpv.set('aid', 'no');
+}
 
-function disableBilingual() {
+function clearFilter() {
   mpv.set('lavfi-complex', '');
-  if (savedAid !== null) {
-    mpv.set('aid', savedAid);
-    savedAid = null;
+  if (state.savedAid !== null) {
+    mpv.set('aid', state.savedAid);
+    state.savedAid = null;
   }
-  bilingualOn = false;
-  refreshMenu();
 }
+
+// ─── Bilingual on/off ───────────────────────────────────────────────────────
 
 function enableBilingual(t1, t2, vol1, vol2) {
-  if (savedAid === null) {
-    savedAid = mpv.getString('aid');
-  }
+  if (state.savedAid === null) state.savedAid = mpv.getString('aid');
+
+  state.leftId = t1;
+  state.rightId = t2;
+  state.vol1 = vol1;
+  state.vol2 = vol2;
+  state.enabled = true;
+
+  // Mid-playback: reload so the on_load hook applies the filter before audio
+  // starts, avoiding the audio decoder resync jump.
   const pos = mpv.getNumber('time-pos');
   const path = mpv.getString('path');
-  const midPlayback = Number.isFinite(pos) && pos > 0 && path && !reloading;
-
-  currentLeftId = t1;
-  currentRightId = t2;
-  currentVol1 = vol1;
-  currentVol2 = vol2;
-  bilingualOn = true;
-
-  if (midPlayback) {
-    reloading = true;
-    pendingSeek = pos;
+  if (Number.isFinite(pos) && pos > 0 && path && !state.reloading) {
+    state.reloading = true;
+    state.pendingSeek = pos;
     mpv.command('loadfile', [path, 'replace']);
   } else {
-    mpv.set('lavfi-complex', buildBilingualFilter(t1, t2, vol1, vol2));
-    mpv.set('aid', 'no');
+    applyFilter();
   }
   refreshMenu();
 }
 
-let pendingSeek = null;
-let reloading = false;
-
-// --- Menu ---
-
-const toggleMenu = menu.item('Toggle Bilingual Mode', toggleBilingual, { keyBinding: 'Ctrl+Shift+B' });
-const swapMenu = menu.item('Swap Left/Right', swapChannels, { enabled: false });
-let leftMenu = menu.item('Left Channel', null, { enabled: false });
-let rightMenu = menu.item('Right Channel', null, { enabled: false });
-
-function buildMenu() {
-  menu.removeAllItems();
-  menu.addItem(toggleMenu);
-  menu.addItem(menu.item('Show Audio Mixer', () => sidebar.show()));
-  menu.addItem(menu.separator());
-  leftMenu = menu.item('Left Channel', null, { enabled: currentTracks.length >= 2 });
-  rightMenu = menu.item('Right Channel', null, { enabled: currentTracks.length >= 2 });
-  currentTracks.forEach((t) => {
-    const id = t.id;
-    const title = t.title || t.lang || ('Track ' + id);
-    leftMenu.addSubMenuItem(menu.item(title, () => selectLeft(id), { selected: id === currentLeftId }));
-    rightMenu.addSubMenuItem(menu.item(title, () => selectRight(id), { selected: id === currentRightId }));
-  });
-  menu.addItem(leftMenu);
-  menu.addItem(rightMenu);
-  menu.addItem(swapMenu);
-  menu.forceUpdate();
-}
-
-function selectLeft(id) {
-  currentLeftId = id;
-  if (bilingualOn) {
-    enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
-    persistCurrent();
-    notifySidebar();
-  } else {
-    buildMenu();
-  }
-}
-
-function selectRight(id) {
-  currentRightId = id;
-  if (bilingualOn) {
-    enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
-    persistCurrent();
-    notifySidebar();
-  } else {
-    buildMenu();
-  }
+function disableBilingual() {
+  clearFilter();
+  state.enabled = false;
+  refreshMenu();
 }
 
 function toggleBilingual() {
-  if (currentTracks.length < 2) return;
-  if (bilingualOn) {
+  if (state.tracks.length < 2) return;
+  if (state.enabled) {
     disableBilingual();
     saveSelection(mpv.getString('path'), { enabled: false });
-    sidebar.postMessage('selection-restored', { enabled: false });
+    notifySidebar();
   } else {
-    if (currentLeftId === null) currentLeftId = currentTracks[0].id;
-    if (currentRightId === null) currentRightId = currentTracks[1].id;
-    enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+    if (state.leftId === null) state.leftId = state.tracks[0].id;
+    if (state.rightId === null) state.rightId = state.tracks[1].id;
+    enableBilingual(state.leftId, state.rightId, state.vol1, state.vol2);
     persistCurrent();
     notifySidebar();
   }
 }
 
 function swapChannels() {
-  if (!bilingualOn) return;
-  const tmp = currentLeftId;
-  currentLeftId = currentRightId;
-  currentRightId = tmp;
-  enableBilingual(currentLeftId, currentRightId, currentVol1, currentVol2);
+  if (!state.enabled) return;
+  [state.leftId, state.rightId] = [state.rightId, state.leftId];
+  enableBilingual(state.leftId, state.rightId, state.vol1, state.vol2);
   persistCurrent();
   notifySidebar();
 }
 
-function persistCurrent() {
-  saveSelection(mpv.getString('path'), {
-    enabled: true,
-    leftId: currentLeftId,
-    rightId: currentRightId,
-    vol1: currentVol1,
-    vol2: currentVol2,
-    savedAid: savedAid
-  });
-}
+// ─── Sidebar sync ───────────────────────────────────────────────────────────
 
 function notifySidebar() {
   sidebar.postMessage('selection-restored', {
-    enabled: bilingualOn,
-    leftId: currentLeftId,
-    rightId: currentRightId,
-    vol1: currentVol1,
-    vol2: currentVol2
+    enabled: state.enabled,
+    leftId: state.leftId,
+    rightId: state.rightId,
+    vol1: state.vol1,
+    vol2: state.vol2,
   });
 }
 
+// ─── Menu ───────────────────────────────────────────────────────────────────
+
+const toggleMenu = menu.item('Toggle Bilingual Mode', toggleBilingual, { keyBinding: 'Ctrl+Shift+B' });
+const swapMenu = menu.item('Swap Left/Right', swapChannels, { enabled: false });
+
+function buildMenu() {
+  menu.removeAllItems();
+  menu.addItem(toggleMenu);
+  menu.addItem(menu.item('Show Audio Mixer', () => sidebar.show()));
+  menu.addItem(menu.separator());
+
+  const hasTracks = state.tracks.length >= 2;
+  const leftMenu = menu.item('Left Channel', null, { enabled: hasTracks });
+  const rightMenu = menu.item('Right Channel', null, { enabled: hasTracks });
+
+  state.tracks.forEach((t) => {
+    const id = t.id;
+    const title = t.title || t.lang || ('Track ' + id);
+    leftMenu.addSubMenuItem(menu.item(title, () => {
+      state.leftId = id;
+      if (state.enabled) { enableBilingual(state.leftId, state.rightId, state.vol1, state.vol2); persistCurrent(); notifySidebar(); }
+      else buildMenu();
+    }, { selected: id === state.leftId }));
+    rightMenu.addSubMenuItem(menu.item(title, () => {
+      state.rightId = id;
+      if (state.enabled) { enableBilingual(state.leftId, state.rightId, state.vol1, state.vol2); persistCurrent(); notifySidebar(); }
+      else buildMenu();
+    }, { selected: id === state.rightId }));
+  });
+
+  menu.addItem(leftMenu);
+  menu.addItem(rightMenu);
+  menu.addItem(swapMenu);
+  menu.forceUpdate();
+}
+
 function refreshMenu() {
-  toggleMenu.selected = bilingualOn;
-  toggleMenu.enabled = currentTracks.length >= 2;
-  swapMenu.enabled = bilingualOn;
+  toggleMenu.selected = state.enabled;
+  toggleMenu.enabled = state.tracks.length >= 2;
+  swapMenu.enabled = state.enabled;
   buildMenu();
 }
+
+// ─── Track detection ────────────────────────────────────────────────────────
+
+function getAudioTracks() {
+  let tracks = core.audio?.tracks || [];
+  if (tracks.length === 0) {
+    const trackList = mpv.getNative('track-list');
+    if (trackList) tracks = trackList.filter(t => t.type === 'audio');
+  }
+  return tracks;
+}
+
+// ─── Hooks & events ─────────────────────────────────────────────────────────
+
+// Apply saved bilingual selection before playback starts (no silence gap).
+mpv.addHook('on_load', 50, (next) => {
+  try {
+    const saved = loadSelection(mpv.getString('path'));
+    if (saved && saved.enabled && saved.leftId !== undefined && saved.rightId !== undefined) {
+      state.leftId = saved.leftId;
+      state.rightId = saved.rightId;
+      state.vol1 = saved.vol1 !== undefined ? saved.vol1 : 1;
+      state.vol2 = saved.vol2 !== undefined ? saved.vol2 : 1;
+      state.savedAid = saved.savedAid !== undefined ? saved.savedAid : null;
+      applyFilter();
+      state.enabled = true;
+    }
+  } catch (e) {
+    console.log('on_load hook error:', e);
+  }
+  state.reloading = false;
+  next();
+});
+
+event.on('mpv.file-loaded', () => {
+  state.reloading = false;
+
+  if (state.pendingSeek !== null) {
+    const seekTo = state.pendingSeek;
+    state.pendingSeek = null;
+    try { mpv.command('seek', [String(seekTo), 'absolute', 'exact']); } catch (e) {}
+  }
+
+  state.tracks = getAudioTracks();
+  if (state.tracks.length > 1) {
+    if (state.leftId === null) state.leftId = state.tracks[0].id;
+    if (state.rightId === null) state.rightId = state.tracks[1].id;
+    sidebar.postMessage('tracks-loaded', { tracks: state.tracks });
+    const saved = loadSelection(mpv.getString('path'));
+    if (saved) {
+      sidebar.postMessage('selection-restored', saved);
+      if (saved.enabled && !state.enabled) {
+        state.savedAid = saved.savedAid !== undefined ? saved.savedAid : null;
+        enableBilingual(saved.leftId, saved.rightId, saved.vol1 || 1, saved.vol2 || 1);
+      }
+    }
+    if (preferences.get('auto_show')) sidebar.show();
+  }
+  refreshMenu();
+});
 
 event.on('iina.window-loaded', () => {
   sidebar.loadFile('sidebar.html');
@@ -207,17 +253,8 @@ event.on('iina.window-loaded', () => {
   sidebar.onMessage('apply-mix', (data) => {
     try {
       if (data.enabled) {
-        const vol1 = data.vol1 !== undefined ? data.vol1 : 1;
-        const vol2 = data.vol2 !== undefined ? data.vol2 : 1;
-        enableBilingual(data.track1Id, data.track2Id, vol1, vol2);
-        saveSelection(mpv.getString('path'), {
-          enabled: true,
-          leftId: data.track1Id,
-          rightId: data.track2Id,
-          vol1: vol1,
-          vol2: vol2,
-          savedAid: savedAid
-        });
+        enableBilingual(data.track1Id, data.track2Id, data.vol1 || 1, data.vol2 || 1);
+        persistCurrent();
         sidebar.postMessage('mix-result', { success: true, message: 'Bilingual on' });
       } else {
         disableBilingual();
@@ -230,87 +267,10 @@ event.on('iina.window-loaded', () => {
   });
 
   sidebar.onMessage('sidebar-ready', () => {
-    if (currentTracks.length > 0) {
-      sidebar.postMessage('tracks-loaded', { tracks: currentTracks });
+    if (state.tracks.length > 0) {
+      sidebar.postMessage('tracks-loaded', { tracks: state.tracks });
       const saved = loadSelection(mpv.getString('path'));
-      if (saved) {
-        sidebar.postMessage('selection-restored', saved);
-      }
+      if (saved) sidebar.postMessage('selection-restored', saved);
     }
   });
-});
-
-function getAudioTracks() {
-  let tracks = core.audio?.tracks || [];
-  if (tracks.length === 0) {
-    const trackList = mpv.getNative('track-list');
-    if (trackList) {
-      tracks = trackList.filter(t => t.type === 'audio');
-    }
-  }
-  return tracks;
-}
-
-// Apply a saved bilingual selection BEFORE playback starts, so there's no
-// 1-second silence gap at the beginning of a reopened file. The on_load hook
-// runs after the file is probed (tracks are known) but before audio output.
-mpv.addHook('on_load', 50, (next) => {
-  try {
-    const path = mpv.getString('path');
-    const saved = loadSelection(path);
-    console.log('on_load hook: path=' + path + ' saved=' + JSON.stringify(saved) + ' reloading=' + reloading);
-    if (saved && saved.enabled && saved.leftId !== undefined && saved.rightId !== undefined) {
-      currentLeftId = saved.leftId;
-      currentRightId = saved.rightId;
-      currentVol1 = saved.vol1 !== undefined ? saved.vol1 : 1;
-      currentVol2 = saved.vol2 !== undefined ? saved.vol2 : 1;
-      if (saved.savedAid !== undefined) {
-        savedAid = saved.savedAid;
-      }
-      // Apply filter directly (not via enableBilingual, which would reload)
-      mpv.set('lavfi-complex', buildBilingualFilter(currentLeftId, currentRightId, currentVol1, currentVol2));
-      mpv.set('aid', 'no');
-      bilingualOn = true;
-      console.log('on_load: bilingual enabled in hook');
-    }
-  } catch (e) {
-    console.log('on_load hook error:', e);
-  }
-  reloading = false;
-  next();
-});
-
-event.on('mpv.file-loaded', () => {
-  reloading = false;
-  if (pendingSeek !== null) {
-    const seekTo = pendingSeek;
-    pendingSeek = null;
-    try { mpv.command('seek', [String(seekTo), 'absolute', 'exact']); } catch (e) {}
-  }
-  const audioTracks = getAudioTracks();
-  currentTracks = audioTracks;
-  if (audioTracks.length > 1) {
-    if (currentLeftId === null) currentLeftId = audioTracks[0].id;
-    if (currentRightId === null) currentRightId = audioTracks[1].id;
-    sidebar.postMessage('tracks-loaded', { tracks: audioTracks });
-    const saved = loadSelection(mpv.getString('path'));
-    if (saved) {
-      sidebar.postMessage('selection-restored', saved);
-      if (saved.enabled && !bilingualOn && !reloading) {
-        if (saved.savedAid !== undefined) {
-          savedAid = saved.savedAid;
-        }
-        enableBilingual(
-          saved.leftId,
-          saved.rightId,
-          saved.vol1 !== undefined ? saved.vol1 : 1,
-          saved.vol2 !== undefined ? saved.vol2 : 1
-        );
-      }
-    }
-    if (preferences.get('auto_show')) {
-      sidebar.show();
-    }
-  }
-  refreshMenu();
 });
