@@ -39,16 +39,22 @@ function loadSelection(path) {
   return map[path] || null;
 }
 
-function buildBilingualFilter(t1, t2) {
+function buildBilingualFilter(t1, t2, vol1, vol2) {
+  const v1 = vol1;
+  const v2 = vol2;
+  const volL = '[mono1]volume=' + v1 + '[mono1v];';
+  const volR = '[mono2]volume=' + v2 + '[mono2v];';
   if (t1 === t2) {
     return '[aid' + t1 + ']asplit[a][b];' +
            '[a]aformat=channel_layouts=mono[mono1];' +
            '[b]aformat=channel_layouts=mono[mono2];' +
-           '[mono1][mono2]amerge=inputs=2[ao]';
+           volL + volR +
+           '[mono1v][mono2v]amerge=inputs=2[ao]';
   }
   return '[aid' + t1 + ']aformat=channel_layouts=mono[mono1];' +
          '[aid' + t2 + ']aformat=channel_layouts=mono[mono2];' +
-         '[mono1][mono2]amerge=inputs=2[ao]';
+         volL + volR +
+         '[mono1v][mono2v]amerge=inputs=2[ao]';
 }
 
 let savedAid = null;
@@ -61,12 +67,12 @@ function disableBilingual() {
   }
 }
 
-function enableBilingual(t1, t2) {
+function enableBilingual(t1, t2, vol1, vol2) {
   if (savedAid === null) {
     savedAid = mpv.getString('aid');
   }
   mpv.set('aid', 'no');
-  mpv.set('lavfi-complex', buildBilingualFilter(t1, t2));
+  mpv.set('lavfi-complex', buildBilingualFilter(t1, t2, vol1, vol2));
 }
 
 event.on('iina.window-loaded', () => {
@@ -75,11 +81,15 @@ event.on('iina.window-loaded', () => {
   sidebar.onMessage('apply-mix', (data) => {
     try {
       if (data.enabled) {
-        enableBilingual(data.track1Id, data.track2Id);
+        const vol1 = data.vol1 !== undefined ? data.vol1 : 1;
+        const vol2 = data.vol2 !== undefined ? data.vol2 : 1;
+        enableBilingual(data.track1Id, data.track2Id, vol1, vol2);
         saveSelection(mpv.getString('path'), {
           enabled: true,
           leftId: data.track1Id,
           rightId: data.track2Id,
+          vol1: vol1,
+          vol2: vol2,
           savedAid: savedAid
         });
         sidebar.postMessage('mix-result', { success: true, message: 'Bilingual on' });
@@ -117,7 +127,12 @@ event.on('mpv.file-loaded', () => {
           if (saved.savedAid !== undefined) {
             savedAid = saved.savedAid;
           }
-          enableBilingual(saved.leftId, saved.rightId);
+          enableBilingual(
+            saved.leftId,
+            saved.rightId,
+            saved.vol1 !== undefined ? saved.vol1 : 1,
+            saved.vol2 !== undefined ? saved.vol2 : 1
+          );
         }
       }
       if (preferences.get('auto_show')) {

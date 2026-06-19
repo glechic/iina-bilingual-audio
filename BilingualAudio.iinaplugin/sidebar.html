@@ -33,6 +33,10 @@
     <p style="margin-top: 8px">Right channel:</p>
     <select id="rightSelect" style="width: 100%; margin-top: 2px"></select>
     <button type="button" id="swapBtn" style="width: 100%; margin-top: 8px; padding: 4px 8px;">Swap left/right</button>
+    <p style="margin-top: 12px;">Left volume: <span id="vol1Label">100%</span></p>
+    <input type="range" id="vol1Slider" min="0" max="100" value="100" style="width: 100%; margin-top: 2px;">
+    <p style="margin-top: 8px;">Right volume: <span id="vol2Label">100%</span></p>
+    <input type="range" id="vol2Slider" min="0" max="100" value="100" style="width: 100%; margin-top: 2px;">
   </div>
 
   <script>
@@ -62,12 +66,16 @@
       const on = document.getElementById('bilingualToggle').checked;
       const t1 = document.getElementById('leftSelect').value;
       const t2 = document.getElementById('rightSelect').value;
+      const vol1 = parseInt(document.getElementById('vol1Slider').value) / 100;
+      const vol2 = parseInt(document.getElementById('vol2Slider').value) / 100;
       document.getElementById('channelSection').classList.toggle('disabled', !on);
       if (iina && iina.postMessage) {
         iina.postMessage('apply-mix', {
           enabled: on,
           track1Id: parseInt(t1),
-          track2Id: parseInt(t2)
+          track2Id: parseInt(t2),
+          vol1: vol1,
+          vol2: vol2
         });
       }
     }
@@ -79,6 +87,12 @@
         document.getElementById('rightSelect').value = state.rightId;
       }
       document.getElementById('bilingualToggle').checked = !!state.enabled;
+      const v1 = state.vol1 !== undefined ? state.vol1 : 1;
+      const v2 = state.vol2 !== undefined ? state.vol2 : 1;
+      document.getElementById('vol1Slider').value = Math.round(v1 * 100);
+      document.getElementById('vol2Slider').value = Math.round(v2 * 100);
+      document.getElementById('vol1Label').textContent = Math.round(v1 * 100) + '%';
+      document.getElementById('vol2Label').textContent = Math.round(v2 * 100) + '%';
       document.getElementById('channelSection').classList.toggle('disabled', !state.enabled);
       suppressApply = false;
     }
@@ -95,6 +109,15 @@
       r.value = tmp;
       apply();
     });
+
+    document.getElementById('vol1Slider').addEventListener('input', (e) => {
+      document.getElementById('vol1Label').textContent = e.target.value + '%';
+    });
+    document.getElementById('vol1Slider').addEventListener('change', apply);
+    document.getElementById('vol2Slider').addEventListener('input', (e) => {
+      document.getElementById('vol2Label').textContent = e.target.value + '%';
+    });
+    document.getElementById('vol2Slider').addEventListener('change', apply);
 
     if (iina && iina.onMessage) {
       iina.onMessage('tracks-loaded', (data) => populateTracks(data.tracks));

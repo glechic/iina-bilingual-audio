@@ -28,6 +28,15 @@ Allow loading an external audio file (e.g. a separate `.m4a`) as one of the two 
 - Use `mpv.command('audio-add', [path, 'auto'])` to load the external track
 - Reference its `aidN` in the lavfi-complex graph
 
+### Detect external audio tracks
+
+Surface external audio tracks (loaded via `audio-add` or demuxer attachments) in the track dropdowns alongside internal ones, so they can be picked for left/right channels.
+
+- Filter `mpv.getNative('track-list')` by `external: true` and `type: 'audio'`
+- Label them distinctly (e.g. `Track N (external): name.ext`) so users can tell them apart from embedded tracks
+- Handle the external track being removed mid-session (rebuild dropdowns on `track-list` change if an event is available; otherwise on a manual refresh / menu entry)
+- Validate the external track has a stable `id` before referencing it in the `lavfi-complex` graph
+
 ### Per-channel volume balance
 
 Add a single balance slider (left ↔ right) rather than two independent volume controls. Keeps the UI minimal while letting users emphasize one language.
@@ -35,11 +44,26 @@ Add a single balance slider (left ↔ right) rather than two independent volume 
 - Implement via `[mono1]volume=V1[mono1v];[mono2]volume=V2[mono2v]` before `amerge`
 - Slider maps position to `V1`/`V2` with `V1 + V2 = 1`
 
+### System theme support (dark mode)
+
+Sidebar currently hardcodes light colors (`rgba(0, 0, 0, 0.5)`). Adopt IINA's native theming so the sidebar matches the system appearance.
+
+- Add `color-scheme: light dark` on `:root`
+- Replace hardcoded colors with CSS variables (`--text-primary`, `--text-secondary`, `--input-border`, `--bg`)
+- Provide `@media (prefers-color-scheme: dark)` overrides (see the opensub plugin reference in `IINA Plugin Investigation.md`)
+- Apply the same variables to `preferences.html`
+
+### Expand menu integration
+
+Only a single "Show Audio Mixer" menu item exists today. Add more menu entries so common actions are reachable without opening the sidebar.
+
+- Toggle bilingual mode on/off
+- Swap left/right channels
+- Reload/refresh track list
+- Group items under a submenu (e.g. `Audio Mixer ▸`) via `menu.addItem` with nested `menu.item`s
+- Reflect the current bilingual state with a checkmark/indicator if `menu.item` supports it
+
 ## Low priority
-
-### Support 3+ audio tracks
-
-Generalize the filter to handle N tracks (e.g. for tri-lingual content). Would require a different UI (checkboxes per track instead of two dropdowns) and `amerge=inputs=N`.
 
 ### Sync adjustment between tracks
 
