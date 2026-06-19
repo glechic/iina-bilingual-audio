@@ -1,241 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    * { box-sizing: border-box; }
+    html { margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f5f5f5;
-      color: #333;
-      padding: 20px;
-      font-size: 13px;
-    }
-    
-    h2 {
-      font-size: 18px;
-      margin-bottom: 20px;
-      color: #1a1a1a;
-    }
-    
-    h3 {
-      font-size: 14px;
-      margin: 20px 0 10px 0;
-      color: #666;
-    }
-    
-    .section {
-      background: #fff;
-      border-radius: 8px;
       padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    label {
-      display: block;
-      margin-bottom: 12px;
-    }
-    
-    label > span {
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 500;
-    }
-    
-    select, input[type="range"] {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
+      margin: 0;
       font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    
-    select:focus, input:focus {
-      outline: none;
-      border-color: #007aff;
-    }
-    
-    input[type="range"] {
-      padding: 0;
-      height: 6px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: #ddd;
-      border-radius: 3px;
-    }
-    
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      background: #007aff;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    
-    input[type="checkbox"] {
-      margin-right: 8px;
-    }
-    
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-    }
-    
-    .volume-value {
-      color: #007aff;
-      font-weight: 600;
-      margin-left: 8px;
-    }
-    
-    button {
-      background: #007aff;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    
-    button:hover {
-      background: #0051d5;
-    }
-    
-    .description {
-      font-size: 11px;
-      color: #999;
-      margin-top: 4px;
-    }
-    
-    .saved-message {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #34c759;
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 6px;
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.3s;
-    }
-    
-    .saved-message.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    p { margin: 0; }
+    small, .small { font-size: 11px; }
+    .secondary { color: rgba(0, 0, 0, 0.5); }
+    .pref-section { margin-bottom: 12px; }
+    .pref-help { margin-top: 2px; }
   </style>
 </head>
 <body>
-  <h2>Bilingual Audio Mixer Preferences</h2>
-  
-  <div class="section">
-    <h3>Default Settings</h3>
-    
+  <div class="pref-section">
     <label>
-      <span>Default Mixing Mode</span>
-      <select id="defaultMode">
-        <option value="single">Single Track</option>
-        <option value="stereo">Stereo (Left/Right)</option>
-        <option value="mixed">Mixed (Both)</option>
-      </select>
-      <div class="description">Initial mode when video with multiple audio tracks is loaded</div>
+      <input type="checkbox" data-type="bool" data-pref-key="auto_show" />
+      Auto-show sidebar for files with multiple audio tracks
     </label>
-    
-    <label>
-      <span>Track 1 Default Volume</span>
-      <div style="display: flex; align-items: center;">
-        <input type="range" id="defaultVol1" min="0" max="100" value="100">
-        <span class="volume-value" id="defaultVol1Value">100%</span>
-      </div>
-    </label>
-    
-    <label>
-      <span>Track 2 Default Volume</span>
-      <div style="display: flex; align-items: center;">
-        <input type="range" id="defaultVol2" min="0" max="100" value="100">
-        <span class="volume-value" id="defaultVol2Value">100%</span>
-      </div>
-    </label>
+    <p class="small secondary pref-help">
+      When enabled, the Audio Mixer sidebar will automatically appear when you open a video with 2+ audio tracks.
+    </p>
   </div>
-  
-  <div class="section">
-    <h3>Behavior</h3>
-    
-    <label class="checkbox-label">
-      <input type="checkbox" id="autoShow" checked>
-      <span>Auto-show sidebar for files with multiple audio tracks</span>
-    </label>
-    
-    <div class="description" style="margin-left: 24px;">
-      When enabled, the Audio Mixer sidebar will automatically appear when you open a video with 2+ audio tracks
-    </div>
-  </div>
-  
-  <button onclick="savePreferences()">Save Preferences</button>
-  
-  <div class="saved-message" id="savedMessage">Preferences saved!</div>
-  
-  <script>
-    document.getElementById('defaultVol1').addEventListener('input', (e) => {
-      document.getElementById('defaultVol1Value').textContent = e.target.value + '%';
-    });
-    
-    document.getElementById('defaultVol2').addEventListener('input', (e) => {
-      document.getElementById('defaultVol2Value').textContent = e.target.value + '%';
-    });
-    
-    function savePreferences() {
-      const prefs = {
-        defaultMode: document.getElementById('defaultMode').value,
-        defaultVol1: parseInt(document.getElementById('defaultVol1').value) / 100,
-        defaultVol2: parseInt(document.getElementById('defaultVol2').value) / 100,
-        autoShow: document.getElementById('autoShow').checked
-      };
-      
-      iina.preferences.set('defaultMode', prefs.defaultMode);
-      iina.preferences.set('defaultVol1', prefs.defaultVol1);
-      iina.preferences.set('defaultVol2', prefs.defaultVol2);
-      iina.preferences.set('autoShow', prefs.autoShow);
-      
-      iina.postMessage('preferences-saved', prefs);
-      
-      const msg = document.getElementById('savedMessage');
-      msg.classList.add('show');
-      setTimeout(() => {
-        msg.classList.remove('show');
-      }, 2000);
-    }
-    
-    iina.onMessage('load-preferences', (prefs) => {
-      if (prefs.defaultMode) {
-        document.getElementById('defaultMode').value = prefs.defaultMode;
-      }
-      if (prefs.defaultVol1 !== undefined) {
-        document.getElementById('defaultVol1').value = prefs.defaultVol1 * 100;
-        document.getElementById('defaultVol1Value').textContent = Math.round(prefs.defaultVol1 * 100) + '%';
-      }
-      if (prefs.defaultVol2 !== undefined) {
-        document.getElementById('defaultVol2').value = prefs.defaultVol2 * 100;
-        document.getElementById('defaultVol2Value').textContent = Math.round(prefs.defaultVol2 * 100) + '%';
-      }
-      if (prefs.autoShow !== undefined) {
-        document.getElementById('autoShow').checked = prefs.autoShow;
-      }
-    });
-  </script>
 </body>
 </html>

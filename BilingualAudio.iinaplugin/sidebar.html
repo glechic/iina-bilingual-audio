@@ -1,117 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; }
+    html { margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, sans-serif;
-      background: #1e1e1e;
-      color: #fff;
-      padding: 15px;
+      padding: 16px;
+      margin: 0;
       font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    h2 { font-size: 16px; margin-bottom: 15px; }
-    h3 { font-size: 12px; margin: 15px 0 8px 0; color: #999; text-transform: uppercase; }
-
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      background: #2a2a2a;
-      border-radius: 6px;
-      margin-bottom: 15px;
-    }
-    .toggle-row span { font-size: 14px; font-weight: 600; }
-    .switch {
-      position: relative;
-      width: 44px;
-      height: 26px;
-      flex-shrink: 0;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .switch .slider {
-      position: absolute;
-      inset: 0;
-      background: #555;
-      border-radius: 13px;
-      transition: background 0.2s;
-      cursor: pointer;
-    }
-    .switch .slider::before {
-      content: "";
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      left: 3px;
-      top: 3px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform 0.2s;
-    }
-    .switch input:checked + .slider { background: #007aff; }
-    .switch input:checked + .slider::before { transform: translateX(18px); }
-
-    select {
-      width: 100%;
-      padding: 8px;
-      margin: 5px 0;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 4px;
-      color: #fff;
-    }
-
-    .status-bar {
-      background: #333;
-      padding: 8px;
-      border-radius: 4px;
-      margin-top: 15px;
-      font-size: 12px;
-      text-align: center;
-    }
-    .status-bar.working { background: #2e7d32; }
-    .status-bar.error { background: #c62828; }
-
+    p { margin: 0; }
+    small, .small { font-size: 11px; }
+    .secondary { color: rgba(0, 0, 0, 0.5); }
+    .section { margin-bottom: 12px; }
     .disabled { opacity: 0.4; pointer-events: none; }
   </style>
 </head>
 <body>
-  <h2>Bilingual Audio</h2>
-
-  <label class="toggle-row">
-    <span>Bilingual Mode</span>
-    <span class="switch">
-      <input type="checkbox" id="bilingualToggle">
-      <span class="slider"></span>
-    </span>
-  </label>
-
-  <div id="channelSection" class="disabled">
-    <h3>Left Channel</h3>
-    <select id="leftSelect"></select>
-
-    <h3>Right Channel</h3>
-    <select id="rightSelect"></select>
+  <div class="section">
+    <label>
+      <input type="checkbox" id="bilingualToggle" />
+      Bilingual mode
+    </label>
+    <p class="small secondary">Send one audio track to the left channel and another to the right.</p>
   </div>
 
-  <div class="status-bar" id="statusBar">Initializing...</div>
+  <div class="section disabled" id="channelSection">
+    <p>Left channel:</p>
+    <select id="leftSelect" style="width: 100%; margin-top: 2px"></select>
+    <p style="margin-top: 8px">Right channel:</p>
+    <select id="rightSelect" style="width: 100%; margin-top: 2px"></select>
+  </div>
 
   <script>
     let tracks = [];
-
-    function setStatus(msg, type) {
-      const bar = document.getElementById('statusBar');
-      bar.textContent = msg;
-      bar.className = 'status-bar ' + (type || '');
-    }
-
-    function buildFilter(t1, t2) {
-      return '[aid' + t1 + ']pan=mono|c0=c0[left];' +
-             '[aid' + t2 + ']pan=mono|c0=c0[right];' +
-             '[left][right]amerge=inputs=2[ao]';
-    }
 
     function populateTracks(list) {
       tracks = list || [];
@@ -119,10 +43,7 @@
       const r = document.getElementById('rightSelect');
       l.innerHTML = '';
       r.innerHTML = '';
-      if (tracks.length === 0) {
-        setStatus('No audio tracks', 'error');
-        return;
-      }
+      if (tracks.length === 0) return;
       tracks.forEach((t, i) => {
         const id = t.id !== undefined ? t.id : (i + 1);
         const title = t.title || t.lang || ('Track ' + id);
@@ -132,7 +53,6 @@
       });
       if (tracks.length >= 1) l.value = tracks[0].id || 1;
       if (tracks.length > 1) r.value = tracks[1].id || 2;
-      setStatus(tracks.length + ' tracks detected', 'working');
     }
 
     function apply() {
@@ -146,7 +66,6 @@
           track1Id: parseInt(t1),
           track2Id: parseInt(t2)
         });
-        setStatus(on ? 'Applying bilingual...' : 'Bilingual off', on ? 'working' : '');
       }
     }
 
@@ -155,15 +74,9 @@
     document.getElementById('rightSelect').addEventListener('change', apply);
 
     if (iina && iina.onMessage) {
-      iina.onMessage('tracks-loaded', (data) => {
-        populateTracks(data.tracks);
-      });
-      iina.onMessage('mix-result', (data) => {
-        setStatus(data.message, data.success ? 'working' : 'error');
-      });
+      iina.onMessage('tracks-loaded', (data) => populateTracks(data.tracks));
+      iina.onMessage('mix-result', (data) => {});
     }
-
-    setStatus('Waiting for tracks...');
   </script>
 </body>
 </html>
