@@ -32,6 +32,7 @@
     <select id="leftSelect" style="width: 100%; margin-top: 2px"></select>
     <p style="margin-top: 8px">Right channel:</p>
     <select id="rightSelect" style="width: 100%; margin-top: 2px"></select>
+    <button type="button" id="swapBtn" style="width: 100%; margin-top: 8px; padding: 4px 8px;">Swap left/right</button>
   </div>
 
   <script>
@@ -85,6 +86,15 @@
     document.getElementById('bilingualToggle').addEventListener('change', apply);
     document.getElementById('leftSelect').addEventListener('change', apply);
     document.getElementById('rightSelect').addEventListener('change', apply);
+
+    document.getElementById('swapBtn').addEventListener('click', () => {
+      const l = document.getElementById('leftSelect');
+      const r = document.getElementById('rightSelect');
+      const tmp = l.value;
+      l.value = r.value;
+      r.value = tmp;
+      apply();
+    });
 
     if (iina && iina.onMessage) {
       iina.onMessage('tracks-loaded', (data) => populateTracks(data.tracks));
