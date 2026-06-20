@@ -21,14 +21,6 @@ jobs:
           VERSION=$(jq -r '.version' src/Info.json)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Create source archives
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          tar -czf /tmp/bilingual-audio-${VERSION}.tar.gz -C . .
-          zip -r -q /tmp/bilingual-audio-${VERSION}.zip . \
-            -x ".git/*" "node_modules/*"
-          mv /tmp/bilingual-audio-${VERSION}.tar.gz /tmp/bilingual-audio-${VERSION}.zip .
-
       - name: Create plugin package
         run: |
           cd src && zip -r -q ../BilingualAudio.iinaplgz . && cd ..
@@ -40,6 +32,4 @@ jobs:
           name: v${{ steps.version.outputs.version }}
           generate_release_notes: true
           files: |
-            bilingual-audio-${{ steps.version.outputs.version }}.tar.gz
-            bilingual-audio-${{ steps.version.outputs.version }}.zip
             BilingualAudio.iinaplgz
