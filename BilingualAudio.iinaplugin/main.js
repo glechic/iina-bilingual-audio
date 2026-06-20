@@ -152,7 +152,7 @@ const swapMenu = menu.item('Swap Left/Right', swapChannels, { enabled: false });
 function buildMenu() {
   menu.removeAllItems();
   menu.addItem(toggleMenu);
-  menu.addItem(menu.item('Show Audio Mixer', () => sidebar.show()));
+  menu.addItem(menu.item('Show Bilingual Audio', () => sidebar.show()));
 
   const hasTracks = state.tracks.length >= 2;
   const leftMenu = menu.item('Left Channel', null, { enabled: hasTracks && state.enabled });

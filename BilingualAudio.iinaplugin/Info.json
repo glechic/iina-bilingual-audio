@@ -1,19 +1,24 @@
 {
-  "name": "Bilingual Audio Mixer",
+  "name": "Bilingual Audio",
   "identifier": "com.bilingual-audio.iina-plugin",
   "version": "1.0.0",
   "author": {
-    "name": "Your Name",
-    "email": "you@example.com"
+    "name": "Sergey Pashkevich",
+    "url": "https://github.com/glechic/iina-bilingual-audio"
   },
   "entry": "main.js",
-  "description": "Mix bilingual audio tracks with left/right channel separation or simultaneous playback",
+  "description": "Play two audio tracks with left/right channel separation for bilingual playback",
   "sidebarTab": {
-    "name": "Audio Mixer"
+    "name": "Bilingual Audio"
   },
   "preferencesPage": "preferences.html",
   "permissions": [
-    "show-osd"
+    "file-system"
   ],
-  "allowedDomains": []
+  "allowedDomains": [],
+  "ghRepo": "glechic/iina-bilingual-audio",
+  "ghVersion": 1,
+  "preferenceDefaults": {
+    "auto_show": false
+  }
 }

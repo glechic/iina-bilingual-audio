@@ -1,4 +1,4 @@
-# IINA Bilingual Audio Mixer Plugin
+# IINA Bilingual Audio Plugin
 
 A plugin for [IINA](https://iina.io/) that plays two audio tracks simultaneously with left/right channel separation — one track on the left speaker, the other on the right.
 
@@ -37,7 +37,7 @@ When bilingual mode is off, the filter is cleared and normal single-track playba
 ## Usage
 
 1. Open a video with 2+ audio tracks in IINA
-2. Open the **Audio Mixer** sidebar (View menu → right sidebar, or the "Show Audio Mixer" menu item added by the plugin)
+2. Open the **Bilingual Audio** sidebar (View menu → right sidebar, or the "Show Bilingual Audio" menu item added by the plugin)
 3. Toggle **Bilingual mode** on
 4. Pick which track goes to the **Left channel** and which to the **Right channel**
 5. Toggle off to return to normal single-track playback
@@ -46,9 +46,9 @@ For best results use headphones so the left/right separation is clear.
 
 ## Preferences
 
-Access via **IINA → Preferences → Plugins → Bilingual Audio Mixer**:
+Access via **IINA → Preferences → Plugins → Bilingual Audio**:
 
-- **Auto-show sidebar for files with multiple audio tracks** — automatically reveal the Audio Mixer sidebar when a file with 2+ audio tracks is opened
+- **Auto-show sidebar for files with multiple audio tracks** — automatically reveal the Bilingual Audio sidebar when a file with 2+ audio tracks is opened
 
 ## File structure
 
