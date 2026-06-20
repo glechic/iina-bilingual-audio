@@ -18,19 +18,20 @@ When bilingual mode is off, the filter is cleared and normal single-track playba
 
 ## Installation
 
-### Method 1: Manual
+### Method 1: Download from releases
 
-1. Copy the `src` folder to the plugins directory as `BilingualAudio.iinaplugin`:
+1. Download `BilingualAudio.iinaplgz` from the [releases page](https://github.com/glechic/iina-bilingual-audio/releases)
+2. Open the `.iinaplgz` file with IINA
+3. Restart IINA
+
+### Method 2: From source
+
+1. Clone or download this repository
+2. Copy the `src` folder to the plugins directory as `BilingualAudio.iinaplugin`:
    ```
    cp -R src/ ~/Library/Application\ Support/com.colliderli.iina/plugins/BilingualAudio.iinaplugin
    ```
-2. Restart IINA
-
-### Method 2: Plugin package
-
-1. Zip the `src` folder
-2. Rename the zip to `BilingualAudio.iinaplgz`
-3. Open the `.iinaplgz` file with IINA
+3. Restart IINA
 
 ## Usage
 
