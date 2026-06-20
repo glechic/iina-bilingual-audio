@@ -23,9 +23,11 @@ jobs:
 
       - name: Create source archives
         run: |
-          tar -czf bilingual-audio-${{ steps.version.outputs.version }}.tar.gz -C . .
-          zip -r -q bilingual-audio-${{ steps.version.outputs.version }}.zip . \
-            -x ".git/*" "node_modules/*" "*.tar.gz" "*.zip"
+          VERSION=${{ steps.version.outputs.version }}
+          tar -czf /tmp/bilingual-audio-${VERSION}.tar.gz -C . .
+          zip -r -q /tmp/bilingual-audio-${VERSION}.zip . \
+            -x ".git/*" "node_modules/*"
+          mv /tmp/bilingual-audio-${VERSION}.tar.gz /tmp/bilingual-audio-${VERSION}.zip .
 
       - name: Create plugin package
         run: |
