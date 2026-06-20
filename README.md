@@ -1,8 +1,6 @@
 # IINA Bilingual Audio Plugin
 
-A plugin for [IINA](https://iina.io/) that plays two audio tracks simultaneously with left/right channel separation — one track on the left speaker, the other on the right.
-
-Useful for bilingual videos where two language tracks are encoded in the same file and you want both playing at once (e.g., language learning, or listening with one ear each via headphones).
+A plugin for [IINA](https://iina.io/) that lets two people watch the same movie together, each hearing it in their own language — one track plays through the left speaker, the other through the right. Each person uses one earbud, or you split a stereo pair between two listeners.
 
 ## How it works
 
@@ -49,32 +47,6 @@ For best results use headphones so the left/right separation is clear.
 Access via **IINA → Preferences → Plugins → Bilingual Audio**:
 
 - **Auto-show sidebar for files with multiple audio tracks** — automatically reveal the Bilingual Audio sidebar when a file with 2+ audio tracks is opened
-
-## File structure
-
-```
-BilingualAudio.iinaplugin/
-├── Info.json          # Plugin metadata
-├── main.js            # Core logic (track detection, lavfi-complex filter)
-├── sidebar.html       # Sidebar UI (toggle + two dropdowns)
-└── preferences.html   # Preferences page (auto_show checkbox)
-```
-
-## Key APIs used
-
-- `iina.mpv.set('lavfi-complex', filter)` — set the bilingual filter graph
-- `iina.mpv.set('aid', ...)` — control which audio track mpv selects (`'no'` lets lavfi-complex own track selection)
-- `iina.mpv.getNative('track-list')` — read audio tracks as a fallback
-- `iina.sidebar.postMessage()` / `iina.sidebar.onMessage()` — sidebar ↔ plugin communication
-- `iina.event.on('mpv.file-loaded')` — detect file load and enumerate tracks
-- `iina.preferences.get('auto_show')` — read user preferences
-
-## Limitations
-
-- Two tracks maximum (the filter graph has fixed `[aid1]`/`[aid2]` labels)
-- Track IDs are mpv's internal IDs (`aid1`, `aid2`), which usually — but not always — match IINA's displayed track order
-- Toggling bilingual on replaces normal audio selection; the current track selection is restored when toggled off
-- Requires a video with 2+ audio tracks; single-track files get no bilingual option
 
 ## Development
 

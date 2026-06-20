@@ -237,9 +237,15 @@ event.on('mpv.file-loaded', () => {
 
   state.tracks = getAudioTracks();
   console.log('Audio tracks: ' + state.tracks.length);
+
+  if (state.tracks.length < 2 && state.enabled) {
+    console.log('Only one track, disabling bilingual');
+    disableBilingual();
+    saveSelection(mpv.getString('path'), { enabled: false });
+    notifySidebar();
+  }
+
   if (state.tracks.length > 1) {
-    if (state.leftId === null) state.leftId = state.tracks[0].id;
-    if (state.rightId === null) state.rightId = state.tracks[1].id;
     sidebar.postMessage('tracks-loaded', { tracks: state.tracks });
     const saved = loadSelection(mpv.getString('path'));
     if (saved) {
@@ -250,6 +256,8 @@ event.on('mpv.file-loaded', () => {
       }
     }
     if (preferences.get('auto_show')) sidebar.show();
+  } else {
+    sidebar.postMessage('tracks-loaded', { tracks: [] });
   }
   refreshMenu();
 });

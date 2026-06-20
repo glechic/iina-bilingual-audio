@@ -118,6 +118,8 @@
       const r = document.getElementById('rightSelect');
       l.innerHTML = '';
       r.innerHTML = '';
+      const toggle = document.getElementById('bilingualToggle');
+      toggle.disabled = tracks.length < 2;
       if (tracks.length === 0) return;
       tracks.forEach((t, i) => {
         const id = t.id !== undefined ? t.id : (i + 1);
