@@ -5,7 +5,7 @@ Key findings from building the plugin. Focused on what works and what doesn't.
 ## Plugin structure
 
 ```
-BilingualAudio.iinaplugin/
+src/
 ├── Info.json          # Plugin metadata (name, identifier, permissions, etc.)
 ├── main.js            # Main entry — has access to mpv/sidebar/menu/event
 ├── preferences.html   # Settings UI (uses data-pref-key attributes)

@@ -2,8 +2,9 @@
   "name": "iina-bilingual-audio",
   "version": "1.0.0",
   "description": "A plugin for [IINA](https://iina.io/) that enables bilingual audio playback by mixing multiple audio tracks using mpv's `lavfi-complex` filter.",
-  "main": "index.js",
+  "main": "src/main.js",
   "scripts": {
+    "install-plugin": "cp -R src ~/Library/Application\\ Support/com.colliderli.iina/plugins/BilingualAudio.iinaplugin",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

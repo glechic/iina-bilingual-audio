@@ -20,15 +20,15 @@ When bilingual mode is off, the filter is cleared and normal single-track playba
 
 ### Method 1: Manual
 
-1. Copy the `BilingualAudio.iinaplugin` folder to:
+1. Copy the `src` folder to the plugins directory as `BilingualAudio.iinaplugin`:
    ```
-   ~/Library/Application Support/com.colliderli.iina/plugins/
+   cp -R src ~/Library/Application\ Support/com.colliderli.iina/plugins/BilingualAudio.iinaplugin
    ```
 2. Restart IINA
 
 ### Method 2: Plugin package
 
-1. Zip the `BilingualAudio.iinaplugin` folder
+1. Zip the `src` folder
 2. Rename the zip to `BilingualAudio.iinaplgz`
 3. Open the `.iinaplgz` file with IINA
 
@@ -50,10 +50,10 @@ Access via **IINA → Preferences → Plugins → Bilingual Audio**:
 
 ## Development
 
-The plugin is plain JavaScript — no build step. Edit the files in `BilingualAudio.iinaplugin/` and copy to the plugins directory to test:
+The plugin is plain JavaScript — no build step. Edit the files in `src/` and copy to the plugins directory to test:
 
 ```sh
-cp -R BilingualAudio.iinaplugin ~/Library/Application\ Support/com.colliderli.iina/plugins/
+cp -R src ~/Library/Application\ Support/com.colliderli.iina/plugins/BilingualAudio.iinaplugin
 ```
 
 Restart IINA after each change.

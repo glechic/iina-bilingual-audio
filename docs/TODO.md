@@ -25,9 +25,9 @@ Add a small delay slider for the right channel in case the two tracks are slight
 
 ### Package the plugin for distribution
 
-The current artifact is a checked-in `BilingualAudio.iinaplugin/` folder that users copy by hand to `~/Library/Application Support/com.colliderli.iina/plugins/`. Add a real packaging/release flow.
+The current artifact is a checked-in `src/` folder that users copy by hand to `~/Library/Application Support/com.colliderli.iina/plugins/BilingualAudio.iinaplugin`. Add a real packaging/release flow.
 
-- Add a build script (npm `prepare` / `prepack` is fine since `package.json` already exists) that zips the contents of `BilingualAudio.iinaplugin/` into `BilingualAudio.iinaplugin-VERSION.zip` (the layout IINA expects)
+- Add a build script (npm `prepare` / `prepack` is fine since `package.json` already exists) that zips the contents of `src/` into `BilingualAudio-VERSION.zip` (the layout IINA expects, renamed to `.iinaplgz`)
 - Bump `Info.json`'s `version` field per release and keep a `CHANGELOG.md`
 - Document install steps in `README.md`: download the zip, extract into the IINA plugins folder, restart IINA
 - Optional: a GitHub Actions workflow that on tag push builds the zip and attaches it to the GitHub Release
