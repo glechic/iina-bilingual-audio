@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "author": {
     "name": "Sergey Pashkevich",
+    "email": "serg.pash99@gmail.com",
     "url": "https://github.com/glechic/iina-bilingual-audio"
   },
   "entry": "main.js",

@@ -1,4 +1,4 @@
-const { core, mpv, sidebar, menu, event, preferences, file } = iina;
+const { core, mpv, sidebar, menu, event, preferences, file, console } = iina;
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +81,7 @@ function clearFilter() {
 // ─── Bilingual on/off ───────────────────────────────────────────────────────
 
 function enableBilingual(t1, t2, vol1, vol2) {
+  console.log('Enable bilingual: left=' + t1 + ' right=' + t2 + ' vol1=' + vol1 + ' vol2=' + vol2);
   if (state.savedAid === null) state.savedAid = mpv.getString('aid');
 
   state.leftId = t1;
@@ -94,6 +95,7 @@ function enableBilingual(t1, t2, vol1, vol2) {
   const pos = mpv.getNumber('time-pos');
   const path = mpv.getString('path');
   if (Number.isFinite(pos) && pos > 0 && path && !state.reloading) {
+    console.log('Mid-playback reload at pos=' + pos);
     state.reloading = true;
     state.pendingSeek = pos;
     mpv.command('loadfile', [path, 'replace']);
@@ -104,6 +106,7 @@ function enableBilingual(t1, t2, vol1, vol2) {
 }
 
 function disableBilingual() {
+  console.log('Disable bilingual');
   clearFilter();
   state.enabled = false;
   refreshMenu();
@@ -126,6 +129,7 @@ function toggleBilingual() {
 
 function swapChannels() {
   if (!state.enabled) return;
+  console.log('Swap channels: ' + state.leftId + ' <-> ' + state.rightId);
   [state.leftId, state.rightId] = [state.rightId, state.leftId];
   enableBilingual(state.leftId, state.rightId, state.vol1, state.vol2);
   persistCurrent();
@@ -203,6 +207,7 @@ function getAudioTracks() {
 mpv.addHook('on_load', 50, (next) => {
   try {
     const saved = loadSelection(mpv.getString('path'));
+    console.log('on_load hook: ' + (saved ? 'saved=' + JSON.stringify(saved) : 'no saved state'));
     if (saved && saved.enabled && saved.leftId !== undefined && saved.rightId !== undefined) {
       state.leftId = saved.leftId;
       state.rightId = saved.rightId;
@@ -211,6 +216,7 @@ mpv.addHook('on_load', 50, (next) => {
       state.savedAid = saved.savedAid !== undefined ? saved.savedAid : null;
       applyFilter();
       state.enabled = true;
+      console.log('on_load: bilingual enabled in hook');
     }
   } catch (e) {
     console.log('on_load hook error:', e);
@@ -220,6 +226,7 @@ mpv.addHook('on_load', 50, (next) => {
 });
 
 event.on('mpv.file-loaded', () => {
+  console.log('File loaded');
   state.reloading = false;
 
   if (state.pendingSeek !== null) {
@@ -229,6 +236,7 @@ event.on('mpv.file-loaded', () => {
   }
 
   state.tracks = getAudioTracks();
+  console.log('Audio tracks: ' + state.tracks.length);
   if (state.tracks.length > 1) {
     if (state.leftId === null) state.leftId = state.tracks[0].id;
     if (state.rightId === null) state.rightId = state.tracks[1].id;
@@ -247,6 +255,7 @@ event.on('mpv.file-loaded', () => {
 });
 
 event.on('iina.window-loaded', () => {
+  console.log('Window loaded');
   sidebar.loadFile('sidebar.html');
 
   sidebar.onMessage('apply-mix', (data) => {
