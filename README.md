@@ -2,6 +2,8 @@
 
 A plugin for [IINA](https://iina.io/) that lets two people watch the same movie together, each hearing it in their own language — one track plays through the left speaker, the other through the right. Each person uses one earbud, or you split a stereo pair between two listeners.
 
+https://github.com/user-attachments/assets/bf40cb24-82d3-49ca-b407-205ca1497f63
+
 ## How it works
 
 The plugin uses mpv's [`--lavfi-complex`](https://mpv.io/manual/stable/#options-lavfi-complex) option to build a filter graph that decodes two audio tracks simultaneously and merges them into a stereo stream with track 1 on the left channel and track 2 on the right:
